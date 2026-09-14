@@ -17,8 +17,8 @@ jobs:
 
       - name: Build for iOS (unsigned)
         run: |
-          xcodebuild -project "中介工具.xcodeproj" \
-            -scheme "中介工具" \
+          xcodebuild -project "AgentTool.xcodeproj" \
+            -scheme "AgentTool" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -derivedDataPath build \
@@ -29,14 +29,14 @@ jobs:
 
       - name: Package IPA
         run: |
-          APP_PATH="build/Build/Products/Release-iphoneos/中介工具.app"
+          APP_PATH="build/Build/Products/Release-iphoneos/AgentTool.app"
           if [ -d "$APP_PATH" ]; then
             mkdir -p Payload
             cp -R "$APP_PATH" Payload/
-            zip -r "中介工具.ipa" Payload
+            zip -r "AgentTool.ipa" Payload
             rm -rf Payload
             echo "IPA created successfully"
-            ls -lh "中介工具.ipa"
+            ls -lh "AgentTool.ipa"
           else
             echo "App not found at $APP_PATH"
             find build -name "*.app" -type d 2>/dev/null || true
@@ -46,6 +46,6 @@ jobs:
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: 中介工具-ipa
-          path: 中介工具.ipa
+          name: AgentTool-ipa
+          path: AgentTool.ipa
           retention-days: 30
