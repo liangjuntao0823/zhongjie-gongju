@@ -150,10 +150,8 @@ struct DashboardView: View {
                 existing.waterAmount = waterAmount
                 existing.electricAmount = electricAmount
                 existing.isSettled = true
-                existing.settledDate = now
             } else {
-                let util = UtilityQuarterRecord(quarter: quarterIndex, waterAmount: waterAmount, electricAmount: electricAmount, isSettled: true)
-                util.settledDate = now
+                let util = UtilityQuarterRecord(quarter: quarterIndex, electricAmount: electricAmount, waterAmount: waterAmount, isSettled: true)
                 property.quarterlyUtilityRecords.append(util)
             }
         }
