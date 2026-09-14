@@ -3,12 +3,10 @@ import SwiftData
 
 @main
 struct AgentToolApp: App {
-    var body: some Scene {
-        WindowGroup {
-            MainTabView()
-                .tint(.themeAccent)
-        }
-        .modelContainer(for: [
+    private let container: ModelContainer
+
+    init() {
+        let types: [any PersistentModel.Type] = [
             Property.self,
             RentMonthRecord.self,
             UtilityQuarterRecord.self,
@@ -18,7 +16,34 @@ struct AgentToolApp: App {
             PayoutRecord.self,
             PayoutMonthRecord.self,
             ProfitCalculation.self
-        ])
+        ]
+
+        do {
+            container = try ModelContainer(for: types)
+        } catch {
+            // 模型迁移失败时，清除旧存储后重建（防止闪退）
+            let fileManager = FileManager.default
+            if let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+                let files = try? fileManager.contentsOfDirectory(at: appSupport, includingPropertiesForKeys: nil)
+                for file in files ?? [] {
+                    if file.lastPathComponent.hasSuffix(".store") ||
+                       file.lastPathComponent.hasSuffix(".store-wal") ||
+                       file.lastPathComponent.hasSuffix(".store-shm") {
+                        try? fileManager.removeItem(at: file)
+                    }
+                }
+            }
+            // 再尝试一次
+            container = try! ModelContainer(for: types)
+        }
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            MainTabView()
+                .tint(.themeAccent)
+        }
+        .modelContainer(container)
     }
 }
 
