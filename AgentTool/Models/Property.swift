@@ -13,9 +13,9 @@ final class Property {
     var leaseStart: String
     var leaseEnd: String
     var leaseDuration: String
-    var rentDueDay: String
-    var waterMeterBase: Double
-    var electricMeterBase: Double
+    var rentDueDay: Int // 1-31
+    var waterMeterBase: Int
+    var electricMeterBase: Int
     var propertyType: String // 普通, 包租, 托管
     var monthlyRentRecords: [RentMonthRecord]
     var quarterlyUtilityRecords: [UtilityQuarterRecord]
@@ -25,7 +25,7 @@ final class Property {
     init(roomNumber: String = "", landlord: String = "", unitType: String = "",
          rent: Double = 0, deposit: Double = 0, prepayment: Double = 0,
          leaseStart: String = "", leaseEnd: String = "", leaseDuration: String = "",
-         rentDueDay: String = "1号", waterMeterBase: Double = 0, electricMeterBase: Double = 0,
+         rentDueDay: Int = 1, waterMeterBase: Int = 0, electricMeterBase: Int = 0,
          propertyType: String = "普通", notes: String = "") {
         self.id = UUID()
         self.roomNumber = roomNumber

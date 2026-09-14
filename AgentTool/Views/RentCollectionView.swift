@@ -4,23 +4,63 @@ import SwiftData
 struct RentCollectionView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Property.roomNumber) private var properties: [Property]
-    @State private var selectedTab = 0
     @State private var showingAddProperty = false
     @State private var selectedProperty: Property?
+    @State private var searchText = ""
+    @State private var selectedDueDay: Int? = nil // nil = 全部
 
     private var filteredProperties: [Property] {
-        selectedTab == 0 ? properties.filter { $0.propertyType == "普通" } : properties.filter { $0.isManaged }
+        properties.filter { prop in
+            let dayMatch = selectedDueDay == nil || prop.rentDueDay == selectedDueDay
+            let searchMatch = searchText.isEmpty ||
+                prop.roomNumber.localizedCaseInsensitiveContains(searchText) ||
+                prop.landlord.localizedCaseInsensitiveContains(searchText) ||
+                prop.unitType.localizedCaseInsensitiveContains(searchText) ||
+                prop.propertyType.localizedCaseInsensitiveContains(searchText) ||
+                prop.notes.localizedCaseInsensitiveContains(searchText)
+            return dayMatch && searchMatch
+        }
     }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                Picker("类型", selection: $selectedTab) {
-                    Text("普通收租").tag(0)
-                    Text("包租/托管").tag(1)
+                // 搜索 + 筛选栏
+                VStack(spacing: 10) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.themeText3)
+                        TextField("搜索房号、房东、户型…", text: $searchText)
+                            .textFieldStyle(.plain)
+                            .foregroundColor(.themeText)
+                        if !searchText.isEmpty {
+                            Button { searchText = "" } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.themeText3)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.themePanel)
+                    .cornerRadius(10)
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.themeBorder, lineWidth: 1))
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            FilterChip(title: "全部", isSelected: selectedDueDay == nil) {
+                                selectedDueDay = nil
+                            }
+                            ForEach(1...31, id: \.self) { day in
+                                FilterChip(title: "\(day)号", isSelected: selectedDueDay == day) {
+                                    selectedDueDay = (selectedDueDay == day) ? nil : day
+                                }
+                            }
+                        }
+                    }
                 }
-                .pickerStyle(.segmented)
-                .padding()
+                .padding(.horizontal)
+                .padding(.vertical, 10)
                 .background(Color.themeBg)
 
                 List {
@@ -53,12 +93,8 @@ struct RentCollectionView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingAddProperty) {
-                AddPropertyView(defaultType: selectedTab == 0 ? "普通" : "包租")
-            }
-            .sheet(item: $selectedProperty) { prop in
-                PropertyDetailView(property: prop)
-            }
+            .sheet(isPresented: $showingAddProperty) { AddPropertyView() }
+            .sheet(item: $selectedProperty) { prop in PropertyDetailView(property: prop) }
         }
     }
 
@@ -104,10 +140,10 @@ struct PropertyRentRow: View {
                         .font(.system(size: 11)).foregroundColor(.themeText2)
                     Text("¥\(Int(property.rent))/月")
                         .font(.system(size: 11)).foregroundColor(.themeText2)
-                    Text(property.rentDueDay)
+                    Text("每月\(property.rentDueDay)号")
                         .font(.system(size: 11)).foregroundColor(.themeText2)
                 }
-                Text(property.leaseStart.isEmpty ? "未出租" : property.leaseStart)
+                Text(property.leaseStart.isEmpty ? "未出租" : "\(property.leaseStart) 至 \(property.leaseEnd)")
                     .font(.system(size: 10))
                     .foregroundColor(property.leaseStart.isEmpty ? .themeAmber : .themeText3)
             }
@@ -130,6 +166,7 @@ struct PropertyRentRow: View {
     }
 }
 
+// MARK: - 房源详情（收租/水电）
 struct PropertyDetailView: View {
     @Environment(\.dismiss) private var dismiss
     let property: Property
@@ -145,44 +182,29 @@ struct PropertyDetailView: View {
                     LabeledContent("房号", value: property.roomNumber)
                     LabeledContent("房东", value: property.landlord)
                     LabeledContent("户型", value: property.unitType)
+                    LabeledContent("房源类型", value: property.propertyType)
                     LabeledContent("租金", value: "¥\(Int(property.rent))/月")
                     LabeledContent("押金", value: "¥\(Int(property.deposit))")
                     LabeledContent("预存", value: "¥\(Int(property.prepayment))")
                     LabeledContent("租期", value: property.leaseStart.isEmpty ? "未出租" : "\(property.leaseStart) 至 \(property.leaseEnd)")
-                    LabeledContent("交租日", value: property.rentDueDay)
+                    LabeledContent("交租日", value: "每月\(property.rentDueDay)号")
                     if !property.notes.isEmpty { LabeledContent("备注", value: property.notes) }
                 }
-                Section("月度收租") {
+
+                Section("月度收租（金额可修改，打勾可取消）") {
                     ForEach(0..<12, id: \.self) { idx in
                         let month = idx + 1
-                        let record = property.monthlyRentRecords.first { $0.month == month }
-                        HStack {
-                            Text(months[idx]).foregroundColor(.themeText)
-                            Spacer()
-                            Text("¥\(Int(record?.amount ?? property.rent))").foregroundColor(.themeText2)
-                            Image(systemName: record?.isPaid ?? false ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(record?.isPaid ?? false ? .themeAccent : .themeText3)
-                                .onTapGesture { toggleRent(month: month) }
-                        }
+                        MonthRentRow(property: property, month: month, label: months[idx])
                     }
                 }
-                Section("水电结算（季度）") {
+
+                Section("水电结算（金额可输入，打勾可取消）") {
                     ForEach(0..<4, id: \.self) { idx in
                         let quarter = idx + 1
-                        let record = property.quarterlyUtilityRecords.first { $0.quarter == quarter }
-                        HStack {
-                            Text(quarters[idx]).foregroundColor(.themeText)
-                            Spacer()
-                            if let record = record {
-                                Text("电¥\(Int(record.electricAmount)) 水¥\(Int(record.waterAmount))")
-                                    .font(.system(size: 12)).foregroundColor(.themeText3)
-                            }
-                            Image(systemName: record?.isSettled ?? false ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(record?.isSettled ?? false ? .themeAccent : .themeText3)
-                                .onTapGesture { toggleUtility(quarter: quarter) }
-                        }
+                        QuarterUtilityRow(property: property, quarter: quarter, label: quarters[idx])
                     }
                 }
+
                 Section("水电底数") {
                     LabeledContent("水表底数", value: "\(property.waterMeterBase)")
                     LabeledContent("电表底数", value: "\(property.electricMeterBase)")
@@ -195,50 +217,161 @@ struct PropertyDetailView: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() }.foregroundColor(.themeAccent) } }
         }
     }
+}
 
-    private func toggleRent(month: Int) {
-        if let index = property.monthlyRentRecords.firstIndex(where: { $0.month == month }) {
-            property.monthlyRentRecords[index].isPaid.toggle()
-            if property.monthlyRentRecords[index].isPaid { property.monthlyRentRecords[index].paidDate = Date() }
-        } else {
-            let record = RentMonthRecord(month: month, amount: property.rent, isPaid: true)
-            record.paidDate = Date()
-            property.monthlyRentRecords.append(record)
+// MARK: - 月度收租行（可编辑金额+可取消打勾）
+struct MonthRentRow: View {
+    let property: Property
+    let month: Int
+    let label: String
+    @State private var amountText: String
+    @State private var isPaid: Bool
+
+    init(property: Property, month: Int, label: String) {
+        self.property = property
+        self.month = month
+        self.label = label
+        let record = property.monthlyRentRecords.first { $0.month == month }
+        let amt = record?.amount ?? property.rent
+        _amountText = State(initialValue: amt > 0 ? String(amt) : "")
+        _isPaid = State(initialValue: record?.isPaid ?? false)
+    }
+
+    var body: some View {
+        HStack {
+            Text(label).foregroundColor(.themeText).frame(width: 40, alignment: .leading)
+            Spacer()
+            TextField("金额", text: $amountText)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .foregroundColor(.themeText)
+                .frame(width: 90)
+                .onChange(of: amountText) { _, newValue in
+                    updateRecord()
+                }
+            Text("元").foregroundColor(.themeText3)
+            Button {
+                isPaid.toggle()
+                updateRecord()
+            } label: {
+                Image(systemName: isPaid ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(isPaid ? .themeAccent : .themeText3)
+                    .font(.system(size: 22))
+            }
+            .buttonStyle(.plain)
         }
     }
 
-    private func toggleUtility(quarter: Int) {
-        if let index = property.quarterlyUtilityRecords.firstIndex(where: { $0.quarter == quarter }) {
-            property.quarterlyUtilityRecords[index].isSettled.toggle()
+    private func updateRecord() {
+        let amount = Double(amountText) ?? 0
+        if let index = property.monthlyRentRecords.firstIndex(where: { $0.month == month }) {
+            property.monthlyRentRecords[index].amount = amount
+            property.monthlyRentRecords[index].isPaid = isPaid
+            property.monthlyRentRecords[index].paidDate = isPaid ? Date() : nil
         } else {
-            property.quarterlyUtilityRecords.append(UtilityQuarterRecord(quarter: quarter, isSettled: true))
+            let record = RentMonthRecord(month: month, amount: amount, isPaid: isPaid)
+            record.paidDate = isPaid ? Date() : nil
+            property.monthlyRentRecords.append(record)
         }
     }
 }
 
+// MARK: - 季度水电行（可输入金额+可取消打勾）
+struct QuarterUtilityRow: View {
+    let property: Property
+    let quarter: Int
+    let label: String
+    @State private var electricText: String
+    @State private var waterText: String
+    @State private var isSettled: Bool
+
+    init(property: Property, quarter: Int, label: String) {
+        self.property = property
+        self.quarter = quarter
+        self.label = label
+        let record = property.quarterlyUtilityRecords.first { $0.quarter == quarter }
+        _electricText = State(initialValue: (record?.electricAmount ?? 0) > 0 ? String(record?.electricAmount ?? 0) : "")
+        _waterText = State(initialValue: (record?.waterAmount ?? 0) > 0 ? String(record?.waterAmount ?? 0) : "")
+        _isSettled = State(initialValue: record?.isSettled ?? false)
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack {
+                Text(label).foregroundColor(.themeText).font(.system(size: 14, weight: .medium))
+                Spacer()
+                Button {
+                    isSettled.toggle()
+                    updateRecord()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: isSettled ? "checkmark.circle.fill" : "circle")
+                            .foregroundColor(isSettled ? .themeAccent : .themeText3)
+                        Text(isSettled ? "已结算" : "未结算")
+                            .font(.system(size: 12))
+                            .foregroundColor(isSettled ? .themeAccentDark : .themeText3)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+            HStack {
+                Text("电费").font(.system(size: 12)).foregroundColor(.themeText2)
+                TextField("输入电费", text: $electricText)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .foregroundColor(.themeText)
+                    .onChange(of: electricText) { _, _ in updateRecord() }
+                Text("元").font(.system(size: 12)).foregroundColor(.themeText3)
+            }
+            HStack {
+                Text("水费").font(.system(size: 12)).foregroundColor(.themeText2)
+                TextField("输入水费", text: $waterText)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .foregroundColor(.themeText)
+                    .onChange(of: waterText) { _, _ in updateRecord() }
+                Text("元").font(.system(size: 12)).foregroundColor(.themeText3)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func updateRecord() {
+        let electric = Double(electricText) ?? 0
+        let water = Double(waterText) ?? 0
+        if let index = property.quarterlyUtilityRecords.firstIndex(where: { $0.quarter == quarter }) {
+            property.quarterlyUtilityRecords[index].electricAmount = electric
+            property.quarterlyUtilityRecords[index].waterAmount = water
+            property.quarterlyUtilityRecords[index].isSettled = isSettled
+        } else {
+            property.quarterlyUtilityRecords.append(
+                UtilityQuarterRecord(quarter: quarter, electricAmount: electric, waterAmount: water, isSettled: isSettled)
+            )
+        }
+    }
+}
+
+// MARK: - 新增房源
 struct AddPropertyView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    let defaultType: String
 
     @State private var roomNumber = ""
     @State private var landlord = ""
     @State private var unitType = ""
-    @State private var rent: Double = 0
-    @State private var deposit: Double = 0
-    @State private var prepayment: Double = 0
+    @State private var rentText = ""
+    @State private var depositText = ""
+    @State private var prepaymentText = ""
     @State private var leaseStart = ""
     @State private var leaseEnd = ""
-    @State private var leaseDuration = "1年"
-    @State private var rentDueDay = "1号"
-    @State private var waterMeterBase: Double = 0
-    @State private var electricMeterBase: Double = 0
+    @State private var leaseDuration = ""
+    @State private var rentDueDay = 1
+    @State private var waterMeterBase = 0
+    @State private var electricMeterBase = 0
     @State private var propertyType = "普通"
     @State private var notes = ""
 
-    private let unitTypes = ["单间上层","单间下层","独立厨房上层","独立厨房下层","复式","中空复式","平层","双钥匙一套"]
-    private let durations = ["1月","2月","3月","半年","8月","1年","2年","月租"]
-    private let dueDays = ["1号","10号","15号","20号","21号","23号","25号","26号"]
+    private let unitTypes = ["单间上层","单间下层","独立厨房上层","独立厨房下层","复式","中空复式","平层","双钥匙一套","三房"]
     private let types = ["普通","包租","托管"]
 
     var body: some View {
@@ -247,23 +380,29 @@ struct AddPropertyView: View {
                 Section("基本信息") {
                     TextField("房号", text: $roomNumber)
                     TextField("房东/管理", text: $landlord)
-                    Picker("户型", selection: $unitType) { Text("未选择").tag(""); ForEach(unitTypes, id: \.self) { Text($0).tag($0) } }
+                    Picker("户型", selection: $unitType) { Text("请选择").tag(""); ForEach(unitTypes, id: \.self) { Text($0).tag($0) } }
                     Picker("房源类型", selection: $propertyType) { ForEach(types, id: \.self) { Text($0).tag($0) } }
                 }
                 Section("租赁信息") {
                     TextField("起租日", text: $leaseStart)
                     TextField("到期日", text: $leaseEnd)
-                    Picker("租期", selection: $leaseDuration) { ForEach(durations, id: \.self) { Text($0).tag($0) } }
-                    Picker("交租日", selection: $rentDueDay) { ForEach(dueDays, id: \.self) { Text($0).tag($0) } }
+                    TextField("租期", text: $leaseDuration)
+                    Picker("交租日", selection: $rentDueDay) {
+                        ForEach(1...31, id: \.self) { day in Text("每月\(day)号").tag(day) }
+                    }
                 }
                 Section("金额") {
-                    HStack { Text("月租金"); TextField("0", value: $rent, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
-                    HStack { Text("押金"); TextField("0", value: $deposit, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
-                    HStack { Text("预存"); TextField("0", value: $prepayment, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
+                    AmountField(label: "月租金", text: $rentText)
+                    AmountField(label: "押金", text: $depositText)
+                    AmountField(label: "预存", text: $prepaymentText)
                 }
-                Section("水电底数") {
-                    HStack { Text("水表底数"); TextField("0", value: $waterMeterBase, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
-                    HStack { Text("电表底数"); TextField("0", value: $electricMeterBase, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
+                Section("水电底数（整数）") {
+                    Stepper(value: $waterMeterBase, in: 0...999999) {
+                        HStack { Text("水表底数"); Spacer(); Text("\(waterMeterBase)").foregroundColor(.themeText2) }
+                    }
+                    Stepper(value: $electricMeterBase, in: 0...999999) {
+                        HStack { Text("电表底数"); Spacer(); Text("\(electricMeterBase)").foregroundColor(.themeText2) }
+                    }
                 }
                 Section("备注") { TextField("备注", text: $notes, axis: .vertical) }
             }
@@ -271,13 +410,13 @@ struct AddPropertyView: View {
             .background(Color.themeBg)
             .navigationTitle("新增房源")
             .navigationBarTitleDisplayMode(.inline)
-            .onAppear { propertyType = defaultType }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
                         let prop = Property(roomNumber: roomNumber, landlord: landlord, unitType: unitType,
-                            rent: rent, deposit: deposit, prepayment: prepayment, leaseStart: leaseStart,
+                            rent: Double(rentText) ?? 0, deposit: Double(depositText) ?? 0,
+                            prepayment: Double(prepaymentText) ?? 0, leaseStart: leaseStart,
                             leaseEnd: leaseEnd, leaseDuration: leaseDuration, rentDueDay: rentDueDay,
                             waterMeterBase: waterMeterBase, electricMeterBase: electricMeterBase,
                             propertyType: propertyType, notes: notes)

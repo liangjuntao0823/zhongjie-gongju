@@ -7,25 +7,30 @@ final class PayoutRecord {
     var roomNumber: String
     var manager: String
     var unitType: String
-    var leasePeriod: String
+    var leaseStartDate: Date
+    var leaseEndDate: Date
     var leaseDuration: String
+    var rentFreeDays: Int // 免租期（天）
     var annualRent: Double
     var deposit: Double
-    var waterMeterBase: Double
+    var waterMeterBase: Int
     var paymentMethod: String // 月付, 季付
     var monthlyPayouts: [PayoutMonthRecord]
     var notes: String
 
     init(roomNumber: String = "", manager: String = "", unitType: String = "",
-         leasePeriod: String = "", leaseDuration: String = "", annualRent: Double = 0,
-         deposit: Double = 0, waterMeterBase: Double = 0, paymentMethod: String = "月付",
+         leaseStartDate: Date = Date(), leaseEndDate: Date = Date(),
+         leaseDuration: String = "", rentFreeDays: Int = 0, annualRent: Double = 0,
+         deposit: Double = 0, waterMeterBase: Int = 0, paymentMethod: String = "月付",
          notes: String = "") {
         self.id = UUID()
         self.roomNumber = roomNumber
         self.manager = manager
         self.unitType = unitType
-        self.leasePeriod = leasePeriod
+        self.leaseStartDate = leaseStartDate
+        self.leaseEndDate = leaseEndDate
         self.leaseDuration = leaseDuration
+        self.rentFreeDays = rentFreeDays
         self.annualRent = annualRent
         self.deposit = deposit
         self.waterMeterBase = waterMeterBase

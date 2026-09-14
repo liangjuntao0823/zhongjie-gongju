@@ -8,12 +8,13 @@ final class DealRecord {
     var roomNumber: String
     var landlord: String
     var unitType: String
-    var leasePeriod: String
+    var leaseStart: Date
+    var leaseEnd: Date
     var leaseDuration: String
     var rent: Double
     var deposit: Double
     var prepayment: Double
-    var rentDueDay: String
+    var rentDueDay: Int // 1-31
     var agentFeeLandlord: Double
     var agentFeeTenant: Double
     var totalFee: Double
@@ -22,9 +23,9 @@ final class DealRecord {
     var notes: String
 
     init(date: Date = Date(), roomNumber: String = "", landlord: String = "",
-         unitType: String = "", leasePeriod: String = "", leaseDuration: String = "",
-         rent: Double = 0, deposit: Double = 0, prepayment: Double = 0,
-         rentDueDay: String = "1号", agentFeeLandlord: Double = 0,
+         unitType: String = "", leaseStart: Date = Date(), leaseEnd: Date = Date(),
+         leaseDuration: String = "", rent: Double = 0, deposit: Double = 0,
+         prepayment: Double = 0, rentDueDay: Int = 1, agentFeeLandlord: Double = 0,
          agentFeeTenant: Double = 0, totalFee: Double = 0, manager: String = "",
          source: String = "", notes: String = "") {
         self.id = UUID()
@@ -32,7 +33,8 @@ final class DealRecord {
         self.roomNumber = roomNumber
         self.landlord = landlord
         self.unitType = unitType
-        self.leasePeriod = leasePeriod
+        self.leaseStart = leaseStart
+        self.leaseEnd = leaseEnd
         self.leaseDuration = leaseDuration
         self.rent = rent
         self.deposit = deposit

@@ -44,7 +44,7 @@ jobs:
           APP_PATH="build/Build/Products/Release-iphoneos/AgentTool.app"
           VERSION="${{ steps.version.outputs.version }}"
           BUILD="${{ steps.version.outputs.build }}"
-          IPA_NAME="AgentTool-v${VERSION}-b${BUILD}.ipa"
+          IPA_NAME="中介管理工具-v${VERSION}-b${BUILD}.ipa"
           if [ -d "$APP_PATH" ]; then
             mkdir -p Payload
             cp -R "$APP_PATH" Payload/
@@ -63,6 +63,6 @@ jobs:
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: AgentTool-ipa-v${{ steps.version.outputs.version }}
+          name: 中介管理工具-ipa-v${{ steps.version.outputs.version }}
           path: ${{ steps.package.outputs.ipa_name }}
           retention-days: 30
