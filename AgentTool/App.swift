@@ -6,20 +6,18 @@ struct AgentToolApp: App {
     private let container: ModelContainer
 
     init() {
-        let types: [any PersistentModel.Type] = [
-            Property.self,
-            RentMonthRecord.self,
-            UtilityQuarterRecord.self,
-            DealRecord.self,
-            MiscIncome.self,
-            MiscExpense.self,
-            PayoutRecord.self,
-            PayoutMonthRecord.self,
-            ProfitCalculation.self
-        ]
-
         do {
-            container = try ModelContainer(for: types)
+            container = try ModelContainer(for:
+                Property.self,
+                RentMonthRecord.self,
+                UtilityQuarterRecord.self,
+                DealRecord.self,
+                MiscIncome.self,
+                MiscExpense.self,
+                PayoutRecord.self,
+                PayoutMonthRecord.self,
+                ProfitCalculation.self
+            )
         } catch {
             // 模型迁移失败时，清除旧存储后重建（防止闪退）
             let fileManager = FileManager.default
@@ -33,8 +31,17 @@ struct AgentToolApp: App {
                     }
                 }
             }
-            // 再尝试一次
-            container = try! ModelContainer(for: types)
+            container = try! ModelContainer(for:
+                Property.self,
+                RentMonthRecord.self,
+                UtilityQuarterRecord.self,
+                DealRecord.self,
+                MiscIncome.self,
+                MiscExpense.self,
+                PayoutRecord.self,
+                PayoutMonthRecord.self,
+                ProfitCalculation.self
+            )
         }
     }
 
