@@ -12,6 +12,7 @@ struct RentCollectionView: View {
     @State private var selectedDueDay: Int? = nil
     @State private var showUtility = false
     @State private var exportURL: ExportURL?
+    @State private var refreshID = UUID()
 
     // 只显示已登记的交租日期
     private var registeredDueDays: [Int] {
@@ -74,23 +75,24 @@ struct RentCollectionView: View {
 
                 List {
                     ForEach(filteredProperties) { prop in
-                        PropertyRentRow(property: prop)
-                            .listRowBackground(Color.themeBg)
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                            .contentShape(Rectangle())
-                            .onTapGesture { selectedProperty = prop }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    if let idx = filteredProperties.firstIndex(where: { $0.id == prop.id }) {
-                                        modelContext.delete(filteredProperties[idx])
-                                    }
-                                } label: { Label("删除", systemImage: "trash") }
-                                Button { editingProperty = prop } label: { Label("修改", systemImage: "pencil") }
-                                    .tint(.themeAccent)
+                        SwipeActionRow(actions: [
+                            SwipeActionItem(title: "修改", icon: "pencil", color: .themeBlue) { editingProperty = prop },
+                            SwipeActionItem(title: "删除", icon: "trash", color: .themeRed) {
+                                if let idx = filteredProperties.firstIndex(where: { $0.id == prop.id }) {
+                                    modelContext.delete(filteredProperties[idx])
+                                }
                             }
+                        ]) {
+                            PropertyRentRow(property: prop)
+                                .contentShape(Rectangle())
+                                .onTapGesture { selectedProperty = prop }
+                        }
+                        .listRowBackground(Color.themeBg)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
                     }
                 }
+                .id(refreshID)
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .background(Color.themeBg)
@@ -146,7 +148,7 @@ struct RentCollectionView: View {
             }
             .sheet(isPresented: $showingAddProperty) { AddPropertyView() }
             .sheet(item: $editingProperty) { prop in AddPropertyView(property: prop) }
-            .sheet(item: $selectedProperty) { prop in PropertyDetailView(property: prop) }
+            .sheet(item: $selectedProperty, onDismiss: { refreshID = UUID() }) { prop in PropertyDetailView(property: prop) }
             .sheet(isPresented: $showUtility) { NavigationStack { UtilityView() } }
             .sheet(item: $exportURL) { url in
                 ShareSheet(activityItems: [url.url])

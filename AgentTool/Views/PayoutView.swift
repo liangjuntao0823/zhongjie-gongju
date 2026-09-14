@@ -14,21 +14,21 @@ struct PayoutView: View {
         NavigationStack {
             List {
                 ForEach(payouts) { payout in
-                    PayoutRow(payout: payout)
-                        .listRowBackground(Color.themeBg)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                        .contentShape(Rectangle())
-                        .onTapGesture { selectedPayout = payout }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                if let idx = payouts.firstIndex(where: { $0.id == payout.id }) {
-                                    modelContext.delete(payouts[idx])
-                                }
-                            } label: { Label("删除", systemImage: "trash") }
-                            Button { editingPayout = payout } label: { Label("修改", systemImage: "pencil") }
-                                .tint(.themeAccent)
+                    SwipeActionRow(actions: [
+                        SwipeActionItem(title: "修改", icon: "pencil", color: .themeBlue) { editingPayout = payout },
+                        SwipeActionItem(title: "删除", icon: "trash", color: .themeRed) {
+                            if let idx = payouts.firstIndex(where: { $0.id == payout.id }) {
+                                modelContext.delete(payouts[idx])
+                            }
                         }
+                    ]) {
+                        PayoutRow(payout: payout)
+                            .contentShape(Rectangle())
+                            .onTapGesture { selectedPayout = payout }
+                    }
+                    .listRowBackground(Color.themeBg)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
                 }
             }
             .listStyle(.plain)

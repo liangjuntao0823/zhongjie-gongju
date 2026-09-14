@@ -424,3 +424,96 @@ func presentDocumentPicker(onPick: @escaping (URL) -> Void) {
     picker.delegate = delegate
     rootVC.present(picker, animated: true)
 }
+
+// MARK: - 自定义椭圆形滑动操作行
+struct SwipeActionItem: Identifiable {
+    let id = UUID()
+    let title: String
+    let icon: String
+    let color: Color
+    let action: () -> Void
+}
+
+struct SwipeActionRow<Content: View>: View {
+    let content: Content
+    let actions: [SwipeActionItem]
+    @State private var offset: CGFloat = 0
+    @State private var isOpen = false
+    @State private var dragStart: CGFloat = 0
+
+    private var actionWidth: CGFloat { CGFloat(actions.count) * 72 + CGFloat(actions.count - 1) * 8 + 32 }
+
+    init(actions: [SwipeActionItem], @ViewBuilder content: () -> Content) {
+        self.actions = actions
+        self.content = content()
+    }
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            // 操作按钮层
+            HStack(spacing: 8) {
+                ForEach(actions) { item in
+                    Button(action: {
+                        item.action()
+                        withAnimation(.spring(response: 0.3)) { offset = 0; isOpen = false }
+                    }) {
+                        VStack(spacing: 3) {
+                            Image(systemName: item.icon)
+                                .font(.system(size: 16))
+                            Text(item.title)
+                                .font(.system(size: 11))
+                        }
+                        .frame(width: 64)
+                        .frame(maxHeight: .infinity)
+                        .background(Capsule().fill(item.color))
+                        .foregroundColor(.white)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+
+            // 内容层
+            content
+                .background(Color.themePanel)
+                .offset(x: offset)
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            if isOpen {
+                                let delta = value.translation.width
+                                if delta > 0 {
+                                    offset = min(0, -actionWidth + delta)
+                                }
+                            } else {
+                                if value.translation.width < 0 {
+                                    offset = max(value.translation.width, -actionWidth)
+                                }
+                            }
+                        }
+                        .onEnded { value in
+                            if isOpen {
+                                if value.translation.width > 40 {
+                                    withAnimation(.spring(response: 0.3)) { offset = 0; isOpen = false }
+                                } else {
+                                    withAnimation(.spring(response: 0.3)) { offset = -actionWidth; isOpen = true }
+                                }
+                            } else {
+                                if value.translation.width < -60 {
+                                    withAnimation(.spring(response: 0.3)) { offset = -actionWidth; isOpen = true }
+                                } else {
+                                    withAnimation(.spring(response: 0.3)) { offset = 0; isOpen = false }
+                                }
+                            }
+                        }
+                )
+                .onTapGesture {
+                    if isOpen {
+                        withAnimation(.spring(response: 0.3)) { offset = 0; isOpen = false }
+                    }
+                }
+        }
+        .clipped()
+    }
+}
