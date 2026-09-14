@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D694F0CEBE0546D8AA78CF6D /* zh_CN.lproj in Resources */ = {isa = PBXBuildFile; fileRef = CA28D6026BAA418489E864DA /* zh_CN.lproj */; };
 		A10000010000000000000001 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000001 /* App.swift */; };
 		A10000010000000000000002 /* Property.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000002 /* Property.swift */; };
 		A10000010000000000000003 /* DealRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000003 /* DealRecord.swift */; };
@@ -25,7 +24,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		CA28D6026BAA418489E864DA /* zh_CN.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder.lproj; path = zh_CN.lproj; sourceTree = "<group>"; };
 		B10000010000000000000001 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		B10000010000000000000002 /* Property.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Property.swift; sourceTree = "<group>"; };
 		B10000010000000000000003 /* DealRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DealRecord.swift; sourceTree = "<group>"; };
@@ -183,7 +181,6 @@
 			files = (
 				A10000010000000000000013 /* Preview Assets.xcassets in Resources */,
 				A10000010000000000000012 /* Assets.xcassets in Resources */,
-				D694F0CEBE0546D8AA78CF6D /* zh_CN.lproj in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
