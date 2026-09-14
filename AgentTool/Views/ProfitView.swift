@@ -141,29 +141,33 @@ struct AddProfitView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var roomNumber = ""
-    @State private var totalPackageAmount: Double = 0
+    @State private var totalPackageAmountText = ""
     @State private var packageStart = Date()
     @State private var packageEnd = Date()
-    @State private var vacancyDays: Int = 0
-    @State private var tenantMonthlyRent: Double = 0
+    @State private var vacancyDaysText = ""
+    @State private var tenantMonthlyRentText = ""
     @State private var rentStart = Date()
     @State private var rentEnd = Date()
     @State private var notes = ""
+
+    private var totalPackageAmount: Double { Double(totalPackageAmountText) ?? 0 }
+    private var vacancyDays: Int { Int(vacancyDaysText) ?? 0 }
+    private var tenantMonthlyRent: Double { Double(tenantMonthlyRentText) ?? 0 }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("基本信息") {
                     TextField("房号", text: $roomNumber)
-                    HStack { Text("包租总金额"); TextField("0", value: $totalPackageAmount, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
+                    AmountField(label: "包租总金额", text: $totalPackageAmountText)
                 }
                 Section("包租周期") {
                     DatePicker("包租起", selection: $packageStart, displayedComponents: .date)
                     DatePicker("包租止", selection: $packageEnd, displayedComponents: .date)
-                    HStack { Text("空置期(天)"); TextField("0", value: $vacancyDays, format: .number).keyboardType(.numberPad).multilineTextAlignment(.trailing) }
+                    HStack { Text("空置期(天)").foregroundColor(.themeText); Spacer(); TextField("请输入", text: $vacancyDaysText).keyboardType(.numberPad).multilineTextAlignment(.trailing).foregroundColor(.themeText).frame(width: 120) }
                 }
                 Section("出租信息") {
-                    HStack { Text("租客月租金"); TextField("0", value: $tenantMonthlyRent, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
+                    AmountField(label: "租客月租金", text: $tenantMonthlyRentText)
                     DatePicker("出租起", selection: $rentStart, displayedComponents: .date)
                     DatePicker("出租止", selection: $rentEnd, displayedComponents: .date)
                 }
@@ -195,7 +199,7 @@ struct AddProfitView: View {
                         modelContext.insert(profit)
                         dismiss()
                     }
-                    .disabled(roomNumber.isEmpty || totalPackageAmount == 0)
+                    .disabled(roomNumber.isEmpty || totalPackageAmountText.isEmpty)
                     .foregroundColor(.themeAccent)
                 }
             }

@@ -1,16 +1,26 @@
 import SwiftUI
 
 struct UtilityView: View {
-    @State private var electricPrice: Double = 0.8
-    @State private var waterPrice: Double = 5.5
-    @State private var electricTotal: Double = 0
-    @State private var electricSub: Double = 0
-    @State private var electricBase: Double = 0
-    @State private var waterTotal: Double = 0
-    @State private var waterSub: Double = 0
-    @State private var waterBase: Double = 0
-    @State private var prepayment: Double = 0
+    @State private var electricPriceText = "0.8"
+    @State private var waterPriceText = "5.5"
+    @State private var electricTotalText = ""
+    @State private var electricSubText = ""
+    @State private var electricBaseText = ""
+    @State private var waterTotalText = ""
+    @State private var waterSubText = ""
+    @State private var waterBaseText = ""
+    @State private var prepaymentText = ""
     @State private var roomNumber = ""
+
+    private var electricPrice: Double { Double(electricPriceText) ?? 0.8 }
+    private var waterPrice: Double { Double(waterPriceText) ?? 5.5 }
+    private var electricTotal: Double { Double(electricTotalText) ?? 0 }
+    private var electricSub: Double { Double(electricSubText) ?? 0 }
+    private var electricBase: Double { Double(electricBaseText) ?? 0 }
+    private var waterTotal: Double { Double(waterTotalText) ?? 0 }
+    private var waterSub: Double { Double(waterSubText) ?? 0 }
+    private var waterBase: Double { Double(waterBaseText) ?? 0 }
+    private var prepayment: Double { Double(prepaymentText) ?? 0 }
 
     private var electricUsage: Double { max(0, electricSub - electricBase) }
     private var waterUsage: Double { max(0, waterSub - waterBase) }
@@ -26,25 +36,25 @@ struct UtilityView: View {
                     TextField("房号", text: $roomNumber)
                 }
                 Section("单价设置") {
-                    HStack { Text("电费单价"); TextField("0.8", value: $electricPrice, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing); Text("元/度").foregroundColor(.themeText3) }
-                    HStack { Text("水费单价"); TextField("5.5", value: $waterPrice, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing); Text("元/吨").foregroundColor(.themeText3) }
+                    HStack { Text("电费单价").foregroundColor(.themeText); Spacer(); TextField("0.8", text: $electricPriceText).keyboardType(.decimalPad).multilineTextAlignment(.trailing).foregroundColor(.themeText).frame(width: 80); Text("元/度").foregroundColor(.themeText3) }
+                    HStack { Text("水费单价").foregroundColor(.themeText); Spacer(); TextField("5.5", text: $waterPriceText).keyboardType(.decimalPad).multilineTextAlignment(.trailing).foregroundColor(.themeText).frame(width: 80); Text("元/吨").foregroundColor(.themeText3) }
                 }
                 Section("电费计算") {
-                    HStack { Text("总表读数"); TextField("0", value: $electricTotal, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
-                    HStack { Text("分表读数"); TextField("0", value: $electricSub, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
-                    HStack { Text("底数"); TextField("0", value: $electricBase, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
+                    HStack { Text("总表读数").foregroundColor(.themeText); Spacer(); TextField("请输入", text: $electricTotalText).keyboardType(.decimalPad).multilineTextAlignment(.trailing).foregroundColor(.themeText).frame(width: 120) }
+                    HStack { Text("分表读数").foregroundColor(.themeText); Spacer(); TextField("请输入", text: $electricSubText).keyboardType(.decimalPad).multilineTextAlignment(.trailing).foregroundColor(.themeText).frame(width: 120) }
+                    HStack { Text("底数").foregroundColor(.themeText); Spacer(); TextField("请输入", text: $electricBaseText).keyboardType(.decimalPad).multilineTextAlignment(.trailing).foregroundColor(.themeText).frame(width: 120) }
                     HStack { Text("用电量"); Spacer(); Text("\(Int(electricUsage)) 度").foregroundColor(.themeText2) }
                     HStack { Text("电费金额"); Spacer(); Text("¥\(String(format: "%.2f", electricCost))").foregroundColor(.themeAmber).fontWeight(.medium) }
                 }
                 Section("水费计算") {
-                    HStack { Text("总表读数"); TextField("0", value: $waterTotal, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
-                    HStack { Text("分表读数"); TextField("0", value: $waterSub, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
-                    HStack { Text("底数"); TextField("0", value: $waterBase, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
+                    HStack { Text("总表读数").foregroundColor(.themeText); Spacer(); TextField("请输入", text: $waterTotalText).keyboardType(.decimalPad).multilineTextAlignment(.trailing).foregroundColor(.themeText).frame(width: 120) }
+                    HStack { Text("分表读数").foregroundColor(.themeText); Spacer(); TextField("请输入", text: $waterSubText).keyboardType(.decimalPad).multilineTextAlignment(.trailing).foregroundColor(.themeText).frame(width: 120) }
+                    HStack { Text("底数").foregroundColor(.themeText); Spacer(); TextField("请输入", text: $waterBaseText).keyboardType(.decimalPad).multilineTextAlignment(.trailing).foregroundColor(.themeText).frame(width: 120) }
                     HStack { Text("用水量"); Spacer(); Text("\(Int(waterUsage)) 吨").foregroundColor(.themeText2) }
                     HStack { Text("水费金额"); Spacer(); Text("¥\(String(format: "%.2f", waterCost))").foregroundColor(.themeBlue).fontWeight(.medium) }
                 }
                 Section("预存结算") {
-                    HStack { Text("预存总额"); TextField("0", value: $prepayment, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
+                    HStack { Text("预存总额").foregroundColor(.themeText); Spacer(); TextField("请输入", text: $prepaymentText).keyboardType(.decimalPad).multilineTextAlignment(.trailing).foregroundColor(.themeText).frame(width: 120) }
                     HStack { Text("水电合计"); Spacer(); Text("¥\(String(format: "%.2f", totalCost))").foregroundColor(.themeRed).fontWeight(.medium) }
                     HStack { Text("结余"); Spacer(); Text(balance >= 0 ? "¥\(String(format: "%.2f", balance))" : "-¥\(String(format: "%.2f", abs(balance)))").foregroundColor(balance >= 0 ? .themeAccentDark : .themeRed).fontWeight(.semibold) }
                 }
@@ -66,9 +76,9 @@ struct UtilityView: View {
                 }
                 Section {
                     Button(role: .destructive) {
-                        electricTotal = 0; electricSub = 0; electricBase = 0
-                        waterTotal = 0; waterSub = 0; waterBase = 0
-                        prepayment = 0; roomNumber = ""
+                        electricTotalText = ""; electricSubText = ""; electricBaseText = ""
+                        waterTotalText = ""; waterSubText = ""; waterBaseText = ""
+                        prepaymentText = ""; roomNumber = ""
                     } label: { HStack { Spacer(); Text("清空重置"); Spacer() } }
                 }
             }

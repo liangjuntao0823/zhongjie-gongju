@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct RentCollectionView: View {
     @Environment(\.modelContext) private var modelContext
@@ -7,7 +8,15 @@ struct RentCollectionView: View {
     @State private var showingAddProperty = false
     @State private var selectedProperty: Property?
     @State private var searchText = ""
-    @State private var selectedDueDay: Int? = nil // nil = 全部
+    @State private var selectedDueDay: Int? = nil
+    @State private var showUtility = false
+    @State private var showFileImporter = false
+    @State private var exportURL: ExportURL?
+
+    // 只显示已登记的交租日期
+    private var registeredDueDays: [Int] {
+        Array(Set(properties.map { $0.rentDueDay })).sorted()
+    }
 
     private var filteredProperties: [Property] {
         properties.filter { prop in
@@ -51,7 +60,7 @@ struct RentCollectionView: View {
                             FilterChip(title: "全部", isSelected: selectedDueDay == nil) {
                                 selectedDueDay = nil
                             }
-                            ForEach(1...31, id: \.self) { day in
+                            ForEach(registeredDueDays, id: \.self) { day in
                                 FilterChip(title: "\(day)号", isSelected: selectedDueDay == day) {
                                     selectedDueDay = (selectedDueDay == day) ? nil : day
                                 }
@@ -87,19 +96,133 @@ struct RentCollectionView: View {
             .navigationTitle("收租管理")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Menu {
+                        Button {
+                            exportToPDF()
+                        } label: {
+                            Label("导出PDF", systemImage: "square.and.arrow.up")
+                        }
+                        Button {
+                            exportTemplate()
+                        } label: {
+                            Label("导出Excel模板", systemImage: "doc.text")
+                        }
+                        Button {
+                            showFileImporter = true
+                        } label: {
+                            Label("导入数据", systemImage: "square.and.arrow.down")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundColor(.themeAccent)
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { showingAddProperty = true } label: {
-                        Image(systemName: "plus.circle.fill").foregroundColor(.themeAccent)
+                    HStack(spacing: 12) {
+                        Button { showUtility = true } label: {
+                            Image(systemName: "bolt.fill").foregroundColor(.themeAccent)
+                        }
+                        Button { showingAddProperty = true } label: {
+                            Image(systemName: "plus.circle.fill").foregroundColor(.themeAccent)
+                        }
                     }
                 }
             }
             .sheet(isPresented: $showingAddProperty) { AddPropertyView() }
             .sheet(item: $selectedProperty) { prop in PropertyDetailView(property: prop) }
+            .sheet(isPresented: $showUtility) { NavigationStack { UtilityView() } }
+            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.commaSeparatedText]) { result in
+                if case .success(let url) = result {
+                    importFromCSV(url: url)
+                }
+            }
+            .sheet(item: $exportURL) { url in
+                ShareSheet(activityItems: [url.url])
+            }
         }
     }
 
     private func deleteProperty(at offsets: IndexSet) {
         for index in offsets { modelContext.delete(filteredProperties[index]) }
+    }
+
+    // MARK: - 导出PDF
+    private func exportToPDF() {
+        let pdfData = NSMutableData()
+        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 595, height: 842))
+
+        renderer.writePDF(to: pdfData) { context in
+            let cgContext = context.cgContext
+            cgContext.setFillColor(UIColor.black.cgColor)
+
+            let titleAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 18)]
+            ("收租记录" as NSString).draw(at: CGPoint(x: 40, y: 40), withAttributes: titleAttrs)
+
+            let dateAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 10), .foregroundColor: UIColor.gray]
+            ("导出时间: \(DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short))" as NSString).draw(at: CGPoint(x: 40, y: 65), withAttributes: dateAttrs)
+
+            cgContext.setFillColor(UIColor(red: 0.08, green: 0.23, blue: 0.20, alpha: 1.0).cgColor)
+            cgContext.fill(CGRect(x: 40, y: 90, width: 515, height: 25))
+
+            let headerAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 10), .foregroundColor: UIColor.white]
+            let colAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 9)]
+            let headers = ["房号", "房东", "户型", "月租", "交租日", "类型", "本月状态"]
+            let widths: [CGFloat] = [80, 70, 80, 70, 60, 70, 85]
+            var x: CGFloat = 45
+            for (i, h) in headers.enumerated() {
+                (h as NSString).draw(at: CGPoint(x: x, y: 96), withAttributes: headerAttrs)
+                x += widths[i]
+            }
+
+            let currentMonth = Calendar.current.component(.month, from: Date())
+            var y: CGFloat = 120
+            for prop in filteredProperties {
+                if y > 800 { context.beginPage(); y = 40 }
+                let paid = prop.monthlyRentRecords.contains { $0.month == currentMonth && $0.isPaid }
+                let vals = [prop.roomNumber, prop.landlord, prop.unitType,
+                            "¥\(Int(prop.rent))", "\(prop.rentDueDay)号",
+                            prop.propertyType, paid ? "已收" : "未收"]
+                x = 45
+                for (i, v) in vals.enumerated() {
+                    (v as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: colAttrs)
+                    x += widths[i]
+                }
+                y += 18
+            }
+
+            let totalAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 11)]
+            ("共 \(filteredProperties.count) 套房源" as NSString).draw(at: CGPoint(x: 40, y: 810), withAttributes: totalAttrs)
+        }
+
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("收租记录-\(Int(Date().timeIntervalSince1970)).pdf")
+        pdfData.write(to: fileURL, atomically: true)
+        exportURL = ExportURL(url: fileURL)
+    }
+
+    private func exportTemplate() {
+        let csv = "房号,房东,户型,月租金,交租日,房源类型,备注\n1-101,张三,单间上层,1000,1,普通收租,示例\n"
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("收租记录-模板.csv")
+        try? csv.write(to: fileURL, atomically: true, encoding: .utf8)
+        exportURL = ExportURL(url: fileURL)
+    }
+
+    private func importFromCSV(url: URL) {
+        guard url.startAccessingSecurityScopedResource() else { return }
+        defer { url.stopAccessingSecurityScopedResource() }
+        guard let content = try? String(contentsOf: url, encoding: .utf8) else { return }
+        let lines = content.components(separatedBy: .newlines).dropFirst()
+        for line in lines {
+            let cols = line.components(separatedBy: ",")
+            guard cols.count >= 5 else { continue }
+            let prop = Property(
+                roomNumber: cols[0], landlord: cols[1], unitType: cols[2],
+                rent: Double(cols[3]) ?? 0, rentDueDay: Int(cols[4]) ?? 1,
+                propertyType: cols.count > 5 ? cols[5] : "普通收租",
+                notes: cols.count > 6 ? cols[6] : ""
+            )
+            modelContext.insert(prop)
+        }
     }
 }
 

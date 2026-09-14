@@ -1,25 +1,24 @@
 import SwiftUI
 import SwiftData
 
+// Tab 路由，用于工作台快捷操作跳转
+final class TabRouter: ObservableObject {
+    @Published var selectedTab: Int = 0
+}
+
 @main
 struct AgentToolApp: App {
     private let container: ModelContainer
+    @StateObject private var tabRouter = TabRouter()
 
     init() {
         do {
             container = try ModelContainer(for:
-                Property.self,
-                RentMonthRecord.self,
-                UtilityQuarterRecord.self,
-                DealRecord.self,
-                MiscIncome.self,
-                MiscExpense.self,
-                PayoutRecord.self,
-                PayoutMonthRecord.self,
-                ProfitCalculation.self
+                Property.self, RentMonthRecord.self, UtilityQuarterRecord.self,
+                DealRecord.self, MiscIncome.self, MiscExpense.self,
+                PayoutRecord.self, PayoutMonthRecord.self, ProfitCalculation.self
             )
         } catch {
-            // 模型迁移失败时，清除旧存储后重建（防止闪退）
             let fileManager = FileManager.default
             if let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
                 let files = try? fileManager.contentsOfDirectory(at: appSupport, includingPropertiesForKeys: nil)
@@ -32,15 +31,9 @@ struct AgentToolApp: App {
                 }
             }
             container = try! ModelContainer(for:
-                Property.self,
-                RentMonthRecord.self,
-                UtilityQuarterRecord.self,
-                DealRecord.self,
-                MiscIncome.self,
-                MiscExpense.self,
-                PayoutRecord.self,
-                PayoutMonthRecord.self,
-                ProfitCalculation.self
+                Property.self, RentMonthRecord.self, UtilityQuarterRecord.self,
+                DealRecord.self, MiscIncome.self, MiscExpense.self,
+                PayoutRecord.self, PayoutMonthRecord.self, ProfitCalculation.self
             )
         }
     }
@@ -51,12 +44,15 @@ struct AgentToolApp: App {
                 .tint(.themeAccent)
                 .environment(\.locale, Locale(identifier: "zh_CN"))
                 .environment(\.calendar, Calendar(identifier: .gregorian))
+                .environmentObject(tabRouter)
         }
         .modelContainer(container)
     }
 }
 
 struct MainTabView: View {
+    @EnvironmentObject private var tabRouter: TabRouter
+
     init() {
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
@@ -76,36 +72,26 @@ struct MainTabView: View {
     }
 
     var body: some View {
-        TabView {
+        TabView(selection: $tabRouter.selectedTab) {
             DashboardView()
-                .tabItem {
-                    Label("工作台", systemImage: "house.fill")
-                }
+                .tabItem { Label("工作台", systemImage: "house.fill") }
+                .tag(0)
 
             DealsView()
-                .tabItem {
-                    Label("成交", systemImage: "doc.text.fill")
-                }
+                .tabItem { Label("成交", systemImage: "doc.text.fill") }
+                .tag(1)
 
             RentCollectionView()
-                .tabItem {
-                    Label("收租", systemImage: "creditcard.fill")
-                }
+                .tabItem { Label("收租", systemImage: "creditcard.fill") }
+                .tag(2)
 
             PayoutView()
-                .tabItem {
-                    Label("打租", systemImage: "arrow.up.circle.fill")
-                }
+                .tabItem { Label("打租", systemImage: "arrow.up.circle.fill") }
+                .tag(3)
 
             ProfitView()
-                .tabItem {
-                    Label("盈亏", systemImage: "chart.pie.fill")
-                }
-
-            UtilityView()
-                .tabItem {
-                    Label("水电", systemImage: "bolt.fill")
-                }
+                .tabItem { Label("盈亏", systemImage: "chart.pie.fill") }
+                .tag(4)
         }
         .tint(.themeAccent)
     }

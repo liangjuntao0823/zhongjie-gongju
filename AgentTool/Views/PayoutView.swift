@@ -1,11 +1,14 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct PayoutView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \PayoutRecord.roomNumber) private var payouts: [PayoutRecord]
     @State private var showingAddPayout = false
     @State private var selectedPayout: PayoutRecord?
+    @State private var showFileImporter = false
+    @State private var exportURL: ExportURL?
 
     var body: some View {
         NavigationStack {
@@ -31,6 +34,21 @@ struct PayoutView: View {
             .navigationTitle("包租打租")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Menu {
+                        Button { exportToPDF() } label: {
+                            Label("导出PDF", systemImage: "square.and.arrow.up")
+                        }
+                        Button { exportTemplate() } label: {
+                            Label("导出Excel模板", systemImage: "doc.text")
+                        }
+                        Button { showFileImporter = true } label: {
+                            Label("导入数据", systemImage: "square.and.arrow.down")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle").foregroundColor(.themeAccent)
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button { showingAddPayout = true } label: {
                         Image(systemName: "plus.circle.fill").foregroundColor(.themeAccent)
@@ -39,11 +57,81 @@ struct PayoutView: View {
             }
             .sheet(isPresented: $showingAddPayout) { AddPayoutView() }
             .sheet(item: $selectedPayout) { payout in PayoutDetailView(payout: payout) }
+            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.commaSeparatedText]) { result in
+                if case .success(let url) = result { importFromCSV(url: url) }
+            }
+            .sheet(item: $exportURL) { url in ShareSheet(activityItems: [url.url]) }
         }
     }
 
     private func deletePayout(at offsets: IndexSet) {
         for index in offsets { modelContext.delete(payouts[index]) }
+    }
+
+    private func exportToPDF() {
+        let pdfData = NSMutableData()
+        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 595, height: 842))
+        renderer.writePDF(to: pdfData) { context in
+            let cg = context.cgContext
+            cg.setFillColor(UIColor.black.cgColor)
+            ("包租打租记录" as NSString).draw(at: CGPoint(x: 40, y: 40), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 18)])
+            ("导出时间: \(DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short))" as NSString).draw(at: CGPoint(x: 40, y: 65), withAttributes: [.font: UIFont.systemFont(ofSize: 10), .foregroundColor: UIColor.gray])
+            cg.setFillColor(UIColor(red: 0.08, green: 0.23, blue: 0.20, alpha: 1.0).cgColor)
+            cg.fill(CGRect(x: 40, y: 90, width: 515, height: 25))
+            let headers = ["房号", "房东", "户型", "年租金", "月打租", "免租期", "管理人"]
+            let widths: [CGFloat] = [80, 70, 80, 80, 80, 60, 65]
+            var x: CGFloat = 45
+            for (i, h) in headers.enumerated() {
+                (h as NSString).draw(at: CGPoint(x: x, y: 96), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 10), .foregroundColor: UIColor.white])
+                x += widths[i]
+            }
+            var y: CGFloat = 120
+            for p in payouts {
+                if y > 800 { context.beginPage(); y = 40 }
+                let vals = [p.roomNumber, p.landlord, p.unitType, "¥\(Int(p.annualRent))",
+                            "¥\(Int(p.monthlyPayout))", "\(p.rentFreeDays)天", p.manager]
+                x = 45
+                for (i, v) in vals.enumerated() {
+                    (v as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: [.font: UIFont.systemFont(ofSize: 9)])
+                    x += widths[i]
+                }
+                y += 18
+            }
+            ("共 \(payouts.count) 条记录" as NSString).draw(at: CGPoint(x: 40, y: 810), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 11)])
+        }
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("打租记录-\(Int(Date().timeIntervalSince1970)).pdf")
+        pdfData.write(to: fileURL, atomically: true)
+        exportURL = ExportURL(url: fileURL)
+    }
+
+    private func exportTemplate() {
+        let csv = "房号,房东,户型,起租日,到期日,年租金,月打租,免租期,支付方式,管理人,备注\n1-101,张三,单间上层,2026-01-01,2027-12-31,12000,1000,15,月付,李四,示例\n"
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("打租记录-模板.csv")
+        try? csv.write(to: fileURL, atomically: true, encoding: .utf8)
+        exportURL = ExportURL(url: fileURL)
+    }
+
+    private func importFromCSV(url: URL) {
+        guard url.startAccessingSecurityScopedResource() else { return }
+        defer { url.stopAccessingSecurityScopedResource() }
+        guard let content = try? String(contentsOf: url, encoding: .utf8) else { return }
+        let lines = content.components(separatedBy: .newlines).dropFirst()
+        let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+        for line in lines {
+            let cols = line.components(separatedBy: ",")
+            guard cols.count >= 7 else { continue }
+            let p = PayoutRecord(
+                roomNumber: cols[0], landlord: cols[1], unitType: cols[2],
+                leaseStartDate: df.date(from: cols[3]) ?? Date(),
+                leaseEndDate: df.date(from: cols[4]) ?? Date(),
+                annualRent: Double(cols[5]) ?? 0, monthlyPayout: Double(cols[6]) ?? 0,
+                rentFreeDays: cols.count > 7 ? Int(cols[7]) ?? 0 : 0,
+                paymentMethod: cols.count > 8 ? cols[8] : "月付",
+                manager: cols.count > 9 ? cols[9] : "",
+                notes: cols.count > 10 ? cols[10] : ""
+            )
+            modelContext.insert(p)
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct DealsView: View {
     @Environment(\.modelContext) private var modelContext
@@ -9,16 +10,22 @@ struct DealsView: View {
     @State private var showingAddDeal = false
     @State private var selectedTab = 0
     @State private var searchText = ""
-    @State private var selectedMonth: Int? = nil // nil = 全部
+    @State private var selectedYear: Int? = nil
+    @State private var selectedMonth: Int? = nil
     @State private var editingDeal: DealRecord?
     @State private var editingIncome: MiscIncome?
     @State private var editingExpense: MiscExpense?
+    @State private var showImportExport = false
+    @State private var showFileImporter = false
+    @State private var exportURL: URL?
 
-    private let months = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"]
+    private let availableYears = [2024, 2025, 2026, 2027, 2028]
 
     private var filteredDeals: [DealRecord] {
         deals.filter { deal in
-            let monthMatch = selectedMonth == nil || Calendar.current.component(.month, from: deal.date) == selectedMonth
+            let cal = Calendar.current
+            let yearMatch = selectedYear == nil || cal.component(.year, from: deal.date) == selectedYear
+            let monthMatch = selectedMonth == nil || cal.component(.month, from: deal.date) == selectedMonth
             let searchMatch = searchText.isEmpty ||
                 deal.roomNumber.localizedCaseInsensitiveContains(searchText) ||
                 deal.landlord.localizedCaseInsensitiveContains(searchText) ||
@@ -26,27 +33,31 @@ struct DealsView: View {
                 deal.manager.localizedCaseInsensitiveContains(searchText) ||
                 deal.source.localizedCaseInsensitiveContains(searchText) ||
                 deal.notes.localizedCaseInsensitiveContains(searchText)
-            return monthMatch && searchMatch
+            return yearMatch && monthMatch && searchMatch
         }
     }
 
     private var filteredIncomes: [MiscIncome] {
         incomes.filter { inc in
-            let monthMatch = selectedMonth == nil || Calendar.current.component(.month, from: inc.date) == selectedMonth
+            let cal = Calendar.current
+            let yearMatch = selectedYear == nil || cal.component(.year, from: inc.date) == selectedYear
+            let monthMatch = selectedMonth == nil || cal.component(.month, from: inc.date) == selectedMonth
             let searchMatch = searchText.isEmpty ||
                 inc.item.localizedCaseInsensitiveContains(searchText) ||
                 inc.notes.localizedCaseInsensitiveContains(searchText)
-            return monthMatch && searchMatch
+            return yearMatch && monthMatch && searchMatch
         }
     }
 
     private var filteredExpenses: [MiscExpense] {
         expenses.filter { exp in
-            let monthMatch = selectedMonth == nil || Calendar.current.component(.month, from: exp.date) == selectedMonth
+            let cal = Calendar.current
+            let yearMatch = selectedYear == nil || cal.component(.year, from: exp.date) == selectedYear
+            let monthMatch = selectedMonth == nil || cal.component(.month, from: exp.date) == selectedMonth
             let searchMatch = searchText.isEmpty ||
                 exp.item.localizedCaseInsensitiveContains(searchText) ||
                 exp.notes.localizedCaseInsensitiveContains(searchText)
-            return monthMatch && searchMatch
+            return yearMatch && monthMatch && searchMatch
         }
     }
 
@@ -74,15 +85,34 @@ struct DealsView: View {
                     .cornerRadius(10)
                     .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.themeBorder, lineWidth: 1))
 
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            FilterChip(title: "全部", isSelected: selectedMonth == nil) {
-                                selectedMonth = nil
+                    HStack(spacing: 8) {
+                        Picker("年份", selection: $selectedYear) {
+                            Text("全部年").tag(nil as Int?)
+                            ForEach(availableYears, id: \.self) { year in
+                                Text("\(year)年").tag(year as Int?)
                             }
+                        }
+                        .pickerStyle(.menu)
+                        .tint(.themeAccent)
+
+                        Picker("月份", selection: $selectedMonth) {
+                            Text("全部月").tag(nil as Int?)
                             ForEach(1...12, id: \.self) { m in
-                                FilterChip(title: months[m-1], isSelected: selectedMonth == m) {
-                                    selectedMonth = (selectedMonth == m) ? nil : m
-                                }
+                                Text("\(m)月").tag(m as Int?)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .tint(.themeAccent)
+
+                        Spacer()
+
+                        if selectedYear != nil || selectedMonth != nil {
+                            Button {
+                                selectedYear = nil
+                                selectedMonth = nil
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.themeText3)
                             }
                         }
                     }
@@ -113,6 +143,28 @@ struct DealsView: View {
             .navigationTitle("成交管理")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Menu {
+                        Button {
+                            exportToPDF()
+                        } label: {
+                            Label("导出PDF", systemImage: "square.and.arrow.up")
+                        }
+                        Button {
+                            exportTemplate()
+                        } label: {
+                            Label("导出Excel模板", systemImage: "doc.text")
+                        }
+                        Button {
+                            showFileImporter = true
+                        } label: {
+                            Label("导入数据", systemImage: "square.and.arrow.down")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundColor(.themeAccent)
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button { showingAddDeal = true } label: {
                         Image(systemName: "plus.circle.fill").foregroundColor(.themeAccent)
@@ -136,6 +188,172 @@ struct DealsView: View {
             }
             .sheet(item: $editingExpense) { exp in
                 EditMiscView(item: .expense(exp))
+            }
+            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.commaSeparatedText]) { result in
+                if case .success(let url) = result {
+                    importFromCSV(url: url)
+                }
+            }
+            .sheet(item: $exportURL) { url in
+                ShareSheet(activityItems: [url])
+            }
+        }
+    }
+
+    // MARK: - 导出PDF
+    private func exportToPDF() {
+        let pdfData = NSMutableData()
+        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 595, height: 842), format: UIGraphicsPDFRendererFormat())
+
+        let title = selectedTab == 0 ? "成交记录" : (selectedTab == 1 ? "杂项收入" : "杂项支出")
+        let records = selectedTab == 0 ? filteredDeals.count : (selectedTab == 1 ? filteredIncomes.count : filteredExpenses.count)
+
+        renderer.writePDF(to: pdfData) { context in
+            let cgContext = context.cgContext
+            cgContext.setFillColor(UIColor.black.cgColor)
+
+            // 标题
+            let titleFont = UIFont.boldSystemFont(ofSize: 18)
+            let titleAttrs: [NSAttributedString.Key: Any] = [.font: titleFont]
+            (title as NSString).draw(at: CGPoint(x: 40, y: 40), withAttributes: titleAttrs)
+
+            // 日期
+            let dateFont = UIFont.systemFont(ofSize: 10)
+            let dateAttrs: [NSAttributedString.Key: Any] = [.font: dateFont, .foregroundColor: UIColor.gray]
+            let dateStr = "导出时间: \(DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short))"
+            (dateStr as NSString).draw(at: CGPoint(x: 40, y: 65), withAttributes: dateAttrs)
+
+            // 表头
+            let headerFont = UIFont.boldSystemFont(ofSize: 10)
+            let headerAttrs: [NSAttributedString.Key: Any] = [.font: headerFont, .foregroundColor: UIColor.white]
+            cgContext.setFillColor(UIColor(red: 0.08, green: 0.23, blue: 0.20, alpha: 1.0).cgColor)
+            cgContext.fill(CGRect(x: 40, y: 90, width: 515, height: 25))
+
+            let colFont = UIFont.systemFont(ofSize: 9)
+            let colAttrs: [NSAttributedString.Key: Any] = [.font: colFont]
+
+            if selectedTab == 0 {
+                let headers = ["日期", "房号", "房东", "户型", "租金", "中介费", "备注"]
+                let widths: [CGFloat] = [70, 70, 60, 70, 60, 70, 115]
+                var x: CGFloat = 45
+                for (i, h) in headers.enumerated() {
+                    (h as NSString).draw(at: CGPoint(x: x, y: 96), withAttributes: headerAttrs)
+                    x += widths[i]
+                }
+                var y: CGFloat = 120
+                for deal in filteredDeals {
+                    if y > 800 {
+                        context.beginPage()
+                        y = 40
+                    }
+                    let vals = [
+                        DateFormatter.localizedString(from: deal.date, dateStyle: .short, timeStyle: .none),
+                        deal.roomNumber, deal.landlord, deal.unitType,
+                        "¥\(Int(deal.rent))", "¥\(Int(deal.totalFee))", deal.notes
+                    ]
+                    x = 45
+                    for (i, v) in vals.enumerated() {
+                        (v as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: colAttrs)
+                        x += widths[i]
+                    }
+                    y += 18
+                }
+            } else {
+                let headers = ["日期", "项目", "金额", "备注"]
+                let widths: [CGFloat] = [100, 150, 100, 165]
+                var x: CGFloat = 45
+                for (i, h) in headers.enumerated() {
+                    (h as NSString).draw(at: CGPoint(x: x, y: 96), withAttributes: headerAttrs)
+                    x += widths[i]
+                }
+                var y: CGFloat = 120
+                let items = selectedTab == 1 ? filteredIncomes.map { ($0.date, $0.item, $0.amount, $0.notes) } : filteredExpenses.map { ($0.date, $0.item, $0.amount, $0.notes) }
+                for item in items {
+                    if y > 800 {
+                        context.beginPage()
+                        y = 40
+                    }
+                    let vals = [
+                        DateFormatter.localizedString(from: item.0, dateStyle: .short, timeStyle: .none),
+                        item.1, "¥\(Int(item.2))", item.3
+                    ]
+                    x = 45
+                    for (i, v) in vals.enumerated() {
+                        (v as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: colAttrs)
+                        x += widths[i]
+                    }
+                    y += 18
+                }
+            }
+
+            // 底部统计
+            let totalFont = UIFont.boldSystemFont(ofSize: 11)
+            let totalAttrs: [NSAttributedString.Key: Any] = [.font: totalFont]
+            let totalStr = "共 \(records) 条记录"
+            (totalStr as NSString).draw(at: CGPoint(x: 40, y: 810), withAttributes: totalAttrs)
+        }
+
+        let tempDir = FileManager.default.temporaryDirectory
+        let fileURL = tempDir.appendingPathComponent("\(title)-\(Int(Date().timeIntervalSince1970)).pdf")
+        pdfData.write(to: fileURL, atomically: true)
+        exportURL = ExportURL(url: fileURL)
+    }
+
+    // MARK: - 导出Excel模板(CSV)
+    private func exportTemplate() {
+        var csv = ""
+        if selectedTab == 0 {
+            csv = "成交日期,房号,房东,户型,起租期,到期日,租期,月租金,押金,预存,交租日,房东中介费,租客中介费,管理人,客源,备注\n"
+            csv += "2026-01-15,1-101,张三,单间上层,2026-01-15,2027-01-14,一年,1000,1000,500,1,500,500,李四,58同城,示例数据\n"
+        } else if selectedTab == 1 {
+            csv = "日期,项目,金额,备注\n2026-01-15,保洁费,200,示例\n"
+        } else {
+            csv = "日期,项目,金额,备注\n2026-01-15,维修费,300,示例\n"
+        }
+        let tempDir = FileManager.default.temporaryDirectory
+        let title = selectedTab == 0 ? "成交记录" : (selectedTab == 1 ? "杂项收入" : "杂项支出")
+        let fileURL = tempDir.appendingPathComponent("\(title)-模板.csv")
+        try? csv.write(to: fileURL, atomically: true, encoding: .utf8)
+        exportURL = ExportURL(url: fileURL)
+    }
+
+    // MARK: - 导入CSV
+    private func importFromCSV(url: URL) {
+        guard url.startAccessingSecurityScopedResource() else { return }
+        defer { url.stopAccessingSecurityScopedResource() }
+        guard let content = try? String(contentsOf: url, encoding: .utf8) else { return }
+        let lines = content.components(separatedBy: .newlines).dropFirst()
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+
+        var count = 0
+        for line in lines {
+            let cols = line.components(separatedBy: ",")
+            guard cols.count >= 3 else { continue }
+            if selectedTab == 0 && cols.count >= 16 {
+                let date = dateFormatter.date(from: cols[0]) ?? Date()
+                let deal = DealRecord(
+                    date: date, roomNumber: cols[1], landlord: cols[2],
+                    unitType: cols[3], leaseStart: dateFormatter.date(from: cols[4]) ?? date,
+                    leaseEnd: dateFormatter.date(from: cols[5]) ?? date,
+                    leaseDuration: cols[6], rent: Double(cols[7]) ?? 0,
+                    deposit: Double(cols[8]) ?? 0, prepayment: Double(cols[9]) ?? 0,
+                    rentDueDay: Int(cols[10]) ?? 1,
+                    agentFeeLandlord: Double(cols[11]) ?? 0,
+                    agentFeeTenant: Double(cols[12]) ?? 0,
+                    totalFee: (Double(cols[11]) ?? 0) + (Double(cols[12]) ?? 0),
+                    manager: cols[13], source: cols[14], notes: cols[15]
+                )
+                modelContext.insert(deal)
+                count += 1
+            } else if selectedTab == 1 {
+                let date = dateFormatter.date(from: cols[0]) ?? Date()
+                modelContext.insert(MiscIncome(date: date, item: cols[1], amount: Double(cols[2]) ?? 0, notes: cols.count > 3 ? cols[3] : ""))
+                count += 1
+            } else if selectedTab == 2 {
+                let date = dateFormatter.date(from: cols[0]) ?? Date()
+                modelContext.insert(MiscExpense(date: date, item: cols[1], amount: Double(cols[2]) ?? 0, notes: cols.count > 3 ? cols[3] : ""))
+                count += 1
             }
         }
     }
@@ -689,4 +907,20 @@ struct EditMiscView: View {
             }
         }
     }
+}
+
+// MARK: - 导出URL包装
+struct ExportURL: Identifiable {
+    let id = UUID()
+    let url: URL
+}
+
+// MARK: - 分享Sheet
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
