@@ -60,8 +60,8 @@ struct PayoutView: View {
             }
             .sheet(isPresented: $showingAddPayout) { AddPayoutView() }
             .sheet(item: $selectedPayout) { payout in PayoutDetailView(payout: payout) }
-            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.commaSeparatedText]) { result in
-                if case .success(let url) = result { importFromCSV(url: url) }
+            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item]) { result in
+                if case .success(let url) = result { importFromFile(url: url) }
             }
             .sheet(item: $exportURL) { url in ShareSheet(activityItems: [url.url]) }
         }
@@ -72,7 +72,10 @@ struct PayoutView: View {
     }
 
     private func exportToImage() {
-        let dateStr = DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short)
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "zh_CN")
+        df.dateFormat = "yyyy年M月d日 HH:mm"
+        let dateStr = df.string(from: Date())
         let rows = payouts.map { p -> [String] in
             let monthlyPayout = p.annualRent / 12
             return [p.roomNumber, p.manager, p.unitType, "¥\(Int(p.annualRent))",
@@ -95,32 +98,81 @@ struct PayoutView: View {
     }
 
     private func exportToExcel() {
-        var csv = "\u{FEFF}房号,管理人,户型,起租日,到期日,年租金,免租期,支付方式,备注\n"
         let df = DateFormatter()
         df.dateFormat = "yyyy-MM-dd"
-        for p in payouts {
-            csv += "\(p.roomNumber),\(p.manager),\(p.unitType),\(df.string(from: p.leaseStartDate)),\(df.string(from: p.leaseEndDate)),\(Int(p.annualRent)),\(p.rentFreeDays),\(p.paymentMethod),\(p.notes)\n"
-        }
-        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("包租记录-\(Int(Date().timeIntervalSince1970)).csv")
-        try? csv.write(to: fileURL, atomically: true, encoding: .utf8)
+        let headers = ["房号","管理人","户型","起租日","到期日","年租金","免租期","支付方式","备注"]
+        let rows = payouts.map { [
+            $0.roomNumber, $0.manager, $0.unitType,
+            df.string(from: $0.leaseStartDate), df.string(from: $0.leaseEndDate),
+            "\(Int($0.annualRent))", "\($0.rentFreeDays)", $0.paymentMethod, $0.notes
+        ]}
+        let html = makeExcelHTML(title: "包租记录", headers: headers, rows: rows)
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("包租记录-\(Int(Date().timeIntervalSince1970)).xls")
+        try? html.write(to: fileURL, atomically: true, encoding: .utf8)
         exportURL = ExportURL(url: fileURL)
     }
 
     private func exportTemplate() {
-        let csv = "\u{FEFF}房号,管理人,户型,起租日,到期日,年租金,免租期,支付方式,备注\n1-101,李四,单间上层,2026-01-01,2027-12-31,12000,15,月付,示例\n"
-        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("打租记录-模板.csv")
-        try? csv.write(to: fileURL, atomically: true, encoding: .utf8)
+        let headers = ["房号","管理人","户型","起租日","到期日","年租金","免租期","支付方式","备注"]
+        let rows = [["1-101","李四","单间上层","2026-01-01","2027-12-31","12000","15","月付","示例"]]
+        let html = makeExcelHTML(title: "包租记录", headers: headers, rows: rows)
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("包租记录-模板.xls")
+        try? html.write(to: fileURL, atomically: true, encoding: .utf8)
         exportURL = ExportURL(url: fileURL)
     }
 
-    private func importFromCSV(url: URL) {
-        guard url.startAccessingSecurityScopedResource() else { return }
-        defer { url.stopAccessingSecurityScopedResource() }
-        guard let content = try? String(contentsOf: url, encoding: .utf8) else { return }
-        let lines = content.components(separatedBy: .newlines).dropFirst()
+    private func importFromFile(url: URL) {
+        let didAccess = url.startAccessingSecurityScopedResource()
+        defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
+        var content: String?
+        if var data = try? Data(contentsOf: url) {
+            if data.count >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
+                data = data.subdata(in: 3..<data.count)
+            }
+            content = String(data: data, encoding: .utf8)
+            if content == nil {
+                let gbk = CFStringEncodings.GB_18030_2000.rawValue
+                let encoding = CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(gbk))
+                content = String(data: data, encoding: String.Encoding(rawValue: encoding))
+            }
+        }
+        guard let text = content else { return }
+
+        var rows: [[String]] = []
+        if text.contains("<tr") {
+            let trPattern = try? NSRegularExpression(pattern: "<tr[^>]*>(.*?)</tr>", options: [.dotMatchesLineSeparators, .caseInsensitive])
+            let tdPattern = try? NSRegularExpression(pattern: "<t[dh][^>]*>(.*?)</t[dh]>", options: [.dotMatchesLineSeparators, .caseInsensitive])
+            if let trMatches = trPattern?.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+                for trMatch in trMatches {
+                    if let trRange = Range(trMatch.range(at: 1), in: text) {
+                        let trContent = String(text[trRange])
+                        var row: [String] = []
+                        if let tdMatches = tdPattern?.matches(in: trContent, range: NSRange(trContent.startIndex..., in: trContent)) {
+                            for tdMatch in tdMatches {
+                                if let tdRange = Range(tdMatch.range(at: 1), in: trContent) {
+                                    var cell = String(trContent[tdRange])
+                                    cell = cell.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+                                    cell = cell.trimmingCharacters(in: .whitespacesAndNewlines)
+                                    row.append(cell)
+                                }
+                            }
+                        }
+                        if !row.isEmpty { rows.append(row) }
+                    }
+                }
+            }
+            if !rows.isEmpty { rows.removeFirst() }
+        } else {
+            let lines = text.components(separatedBy: .newlines).dropFirst()
+            for line in lines {
+                let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { continue }
+                rows.append(trimmed.components(separatedBy: ","))
+            }
+        }
+
         let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
-        for line in lines {
-            let cols = line.components(separatedBy: ",")
+        for cols in rows {
             guard cols.count >= 6 else { continue }
             let p = PayoutRecord(
                 roomNumber: cols[0], manager: cols[1], unitType: cols[2],

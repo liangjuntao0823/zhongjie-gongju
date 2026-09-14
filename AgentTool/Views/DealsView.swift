@@ -178,9 +178,9 @@ struct DealsView: View {
             .sheet(item: $editingExpense) { exp in
                 EditMiscView(item: .expense(exp))
             }
-            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.data, .commaSeparatedText, .text]) { result in
+            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item]) { result in
                 if case .success(let url) = result {
-                    importFromCSV(url: url)
+                    importFromFile(url: url)
                 }
             }
             .sheet(item: $exportURL) { export in
@@ -192,7 +192,10 @@ struct DealsView: View {
     // MARK: - 导出图片
     private func exportToImage() {
         let title = selectedTab == 0 ? "成交记录" : (selectedTab == 1 ? "杂项收入" : "杂项支出")
-        let dateStr = DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short)
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "zh_CN")
+        df.dateFormat = "yyyy年M月d日 HH:mm"
+        let dateStr = df.string(from: Date())
 
         let view = ExportTableView(
             title: title,
@@ -222,87 +225,122 @@ struct DealsView: View {
         }
     }
 
-    // MARK: - 导出Excel(CSV)
+    // MARK: - 导出Excel(.xls)
     private func exportToExcel() {
         let title = selectedTab == 0 ? "成交记录" : (selectedTab == 1 ? "杂项收入" : "杂项支出")
-        var csv = "\u{FEFF}"
+        let df = DateFormatter()
+        df.dateFormat = "yyyy-MM-dd"
+        var headers: [String] = []
+        var rows: [[String]] = []
         if selectedTab == 0 {
-            csv += "成交日期,房号,房东,户型,起租期,到期日,租期,月租金,押金,预存,交租日,房东中介费,租客中介费,管理人,客源,备注\n"
+            headers = ["成交日期","房号","房东","户型","起租期","到期日","租期","月租金","押金","预存","交租日","房东中介费","租客中介费","管理人","客源","备注"]
             for deal in filteredDeals {
-                let df = DateFormatter()
-                df.dateFormat = "yyyy-MM-dd"
-                csv += "\(df.string(from: deal.date)),\(deal.roomNumber),\(deal.landlord),\(deal.unitType),\(df.string(from: deal.leaseStart)),\(df.string(from: deal.leaseEnd)),\(deal.leaseDuration),\(Int(deal.rent)),\(Int(deal.deposit)),\(Int(deal.prepayment)),\(deal.rentDueDay ?? 0),\(Int(deal.agentFeeLandlord)),\(Int(deal.agentFeeTenant)),\(deal.manager),\(deal.source),\(deal.notes)\n"
+                rows.append([df.string(from: deal.date), deal.roomNumber, deal.landlord, deal.unitType,
+                             df.string(from: deal.leaseStart), df.string(from: deal.leaseEnd), deal.leaseDuration,
+                             "\(Int(deal.rent))", "\(Int(deal.deposit))", "\(Int(deal.prepayment))",
+                             deal.rentDueDay.map { "\($0)" } ?? "",
+                             "\(Int(deal.agentFeeLandlord))", "\(Int(deal.agentFeeTenant))",
+                             deal.manager, deal.source, deal.notes])
             }
         } else if selectedTab == 1 {
-            csv += "日期,项目,金额,备注\n"
-            let df = DateFormatter()
-            df.dateFormat = "yyyy-MM-dd"
+            headers = ["日期","项目","金额","备注"]
             for inc in filteredIncomes {
-                csv += "\(df.string(from: inc.date)),\(inc.item),\(Int(inc.amount)),\(inc.notes)\n"
+                rows.append([df.string(from: inc.date), inc.item, "\(Int(inc.amount))", inc.notes])
             }
         } else {
-            csv += "日期,项目,金额,备注\n"
-            let df = DateFormatter()
-            df.dateFormat = "yyyy-MM-dd"
+            headers = ["日期","项目","金额","备注"]
             for exp in filteredExpenses {
-                csv += "\(df.string(from: exp.date)),\(exp.item),\(Int(exp.amount)),\(exp.notes)\n"
+                rows.append([df.string(from: exp.date), exp.item, "\(Int(exp.amount))", exp.notes])
             }
         }
-        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(title)-\(Int(Date().timeIntervalSince1970)).csv")
-        try? csv.write(to: fileURL, atomically: true, encoding: .utf8)
+        let html = makeExcelHTML(title: title, headers: headers, rows: rows)
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(title)-\(Int(Date().timeIntervalSince1970)).xls")
+        try? html.write(to: fileURL, atomically: true, encoding: .utf8)
         exportURL = ExportURL(url: fileURL)
     }
 
-    // MARK: - 导出Excel模板(CSV)
+    // MARK: - 导出Excel模板(.xls)
     private func exportTemplate() {
-        var csv = "\u{FEFF}"
-        if selectedTab == 0 {
-            csv += "成交日期,房号,房东,户型,起租期,到期日,租期,月租金,押金,预存,交租日,房东中介费,租客中介费,管理人,客源,备注\n"
-            csv += "2026-01-15,1-101,张三,单间上层,2026-01-15,2027-01-14,一年,1000,1000,500,1,500,500,李四,58同城,示例数据\n"
-        } else if selectedTab == 1 {
-            csv += "日期,项目,金额,备注\n2026-01-15,保洁费,200,示例\n"
-        } else {
-            csv += "日期,项目,金额,备注\n2026-01-15,维修费,300,示例\n"
-        }
-        let tempDir = FileManager.default.temporaryDirectory
         let title = selectedTab == 0 ? "成交记录" : (selectedTab == 1 ? "杂项收入" : "杂项支出")
-        let fileURL = tempDir.appendingPathComponent("\(title)-模板.csv")
-        try? csv.write(to: fileURL, atomically: true, encoding: .utf8)
+        var headers: [String] = []
+        var rows: [[String]] = []
+        if selectedTab == 0 {
+            headers = ["成交日期","房号","房东","户型","起租期","到期日","租期","月租金","押金","预存","交租日","房东中介费","租客中介费","管理人","客源","备注"]
+            rows = [["2026-01-15","1-101","张三","单间上层","2026-01-15","2027-01-14","一年","1000","1000","500","1","500","500","李四","58同城","示例数据"]]
+        } else if selectedTab == 1 {
+            headers = ["日期","项目","金额","备注"]
+            rows = [["2026-01-15","保洁费","200","示例"]]
+        } else {
+            headers = ["日期","项目","金额","备注"]
+            rows = [["2026-01-15","维修费","300","示例"]]
+        }
+        let html = makeExcelHTML(title: title, headers: headers, rows: rows)
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(title)-模板.xls")
+        try? html.write(to: fileURL, atomically: true, encoding: .utf8)
         exportURL = ExportURL(url: fileURL)
     }
 
-    // MARK: - 导入CSV
-    private func importFromCSV(url: URL) {
+    // MARK: - 导入文件(支持CSV和HTML格式的.xls)
+    private func importFromFile(url: URL) {
         let didAccess = url.startAccessingSecurityScopedResource()
         defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
 
-        // 尝试读取文件内容，支持UTF-8和GBK
+        // 读取文件内容，支持UTF-8和GBK
         var content: String?
-        if let data = try? Data(contentsOf: url) {
-            // 去掉BOM
-            var data = data
+        if var data = try? Data(contentsOf: url) {
             if data.count >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
                 data = data.subdata(in: 3..<data.count)
             }
             content = String(data: data, encoding: .utf8)
             if content == nil {
-                // 尝试GBK编码
                 let gbk = CFStringEncodings.GB_18030_2000.rawValue
                 let encoding = CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(gbk))
                 content = String(data: data, encoding: String.Encoding(rawValue: encoding))
             }
         }
-        guard let csv = content else { return }
+        guard let text = content else { return }
 
-        let lines = csv.components(separatedBy: .newlines).dropFirst()
+        // 解析数据行：支持CSV和HTML表格
+        var rows: [[String]] = []
+        if text.contains("<tr") {
+            // HTML格式
+            let trPattern = try? NSRegularExpression(pattern: "<tr[^>]*>(.*?)</tr>", options: [.dotMatchesLineSeparators, .caseInsensitive])
+            let tdPattern = try? NSRegularExpression(pattern: "<t[dh][^>]*>(.*?)</t[dh]>", options: [.dotMatchesLineSeparators, .caseInsensitive])
+            if let trMatches = trPattern?.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+                for trMatch in trMatches {
+                    if let trRange = Range(trMatch.range(at: 1), in: text) {
+                        let trContent = String(text[trRange])
+                        var row: [String] = []
+                        if let tdMatches = tdPattern?.matches(in: trContent, range: NSRange(trContent.startIndex..., in: trContent)) {
+                            for tdMatch in tdMatches {
+                                if let tdRange = Range(tdMatch.range(at: 1), in: trContent) {
+                                    var cell = String(trContent[tdRange])
+                                    cell = cell.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+                                    cell = cell.trimmingCharacters(in: .whitespacesAndNewlines)
+                                    row.append(cell)
+                                }
+                            }
+                        }
+                        if !row.isEmpty { rows.append(row) }
+                    }
+                }
+            }
+            // 跳过表头
+            if !rows.isEmpty { rows.removeFirst() }
+        } else {
+            // CSV格式
+            let lines = text.components(separatedBy: .newlines).dropFirst()
+            for line in lines {
+                let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { continue }
+                rows.append(trimmed.components(separatedBy: ","))
+            }
+        }
+
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
-
         var count = 0
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { continue }
-            let cols = trimmed.components(separatedBy: ",")
+        for cols in rows {
             guard cols.count >= 3 else { continue }
             if selectedTab == 0 && cols.count >= 16 {
                 let date = dateFormatter.date(from: cols[0]) ?? Date()

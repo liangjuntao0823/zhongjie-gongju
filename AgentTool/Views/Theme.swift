@@ -376,3 +376,27 @@ struct WheelYearMonthPicker: View {
         }
     }
 }
+
+// MARK: - HTML Excel 生成（解决CSV保存后格式乱问题）
+func makeExcelHTML(title: String, headers: [String], rows: [[String]]) -> String {
+    var html = """
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+    <meta charset="UTF-8">
+    <style>
+    table { border-collapse: collapse; }
+    td, th { border: 1px solid #999; padding: 4px 8px; font-family: Arial; font-size: 12px; mso-number-format:'\\@'; white-space: nowrap; }
+    th { background-color: #143B34; color: white; font-weight: bold; }
+    tr:nth-child(even) td { background-color: #F5F7F5; }
+    </style>
+    </head>
+    <body>
+    <table>
+    """
+    html += "<tr>" + headers.map { "<th>\($0)</th>" }.joined() + "</tr>\n"
+    for row in rows {
+        html += "<tr>" + row.map { "<td>\($0)</td>" }.joined() + "</tr>\n"
+    }
+    html += "</table></body></html>"
+    return html
+}

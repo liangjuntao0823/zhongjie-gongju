@@ -12,6 +12,9 @@ struct AgentToolApp: App {
     @StateObject private var tabRouter = TabRouter()
 
     init() {
+        // 强制应用内系统控件使用中文（包括分享界面、日期选择器等）
+        UserDefaults.standard.set(["zh-Hans", "zh_CN"], forKey: "AppleLanguages")
+        UserDefaults.standard.synchronize()
         do {
             container = try ModelContainer(for:
                 Property.self, RentMonthRecord.self, UtilityQuarterRecord.self,

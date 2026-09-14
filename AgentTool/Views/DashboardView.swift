@@ -179,39 +179,39 @@ struct DashboardView: View {
             .cornerRadius(14)
             .padding(.horizontal)
 
-            // 快捷操作（固定）
-            VStack(alignment: .leading, spacing: 10) {
-                SectionTitle(title: "快捷操作")
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    QuickActionItem(icon: "plus.circle.fill", label: "新增成交", color: .themeAccent) {
-                        showAddDeal = true
-                    }
-                    QuickActionItem(icon: "creditcard.fill", label: "登记收租", color: .themeBlue) {
-                        showAddRent = true
-                    }
-                    QuickActionItem(icon: "arrow.up.circle.fill", label: "新增包租", color: Color(hex: "6B3FA0")) {
-                        showAddPayout = true
-                    }
-                    QuickActionItem(icon: "dollarsign.circle.fill", label: "新增收入", color: Color(hex: "2E8B57")) {
-                        showAddIncome = true
-                    }
-                    QuickActionItem(icon: "dollarsign.circle.fill", label: "新增支出", color: Color(hex: "CD5C5C")) {
-                        showAddExpense = true
-                    }
-                    QuickActionItem(icon: "bolt.fill", label: "水电结算", color: .themeAmber) {
-                        showUtility = true
-                    }
-                }
-            }
-            .padding(14)
-            .background(Color.themePanel)
-            .cornerRadius(14)
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.themeBorder, lineWidth: 1))
-            .padding(.horizontal)
-
             // 以下内容可滑动
             ScrollView {
                 VStack(spacing: 16) {
+                    // 快捷操作
+                    VStack(alignment: .leading, spacing: 10) {
+                        SectionTitle(title: "快捷操作")
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                            QuickActionItem(icon: "plus.circle.fill", label: "新增成交", color: .themeAccent) {
+                                showAddDeal = true
+                            }
+                            QuickActionItem(icon: "creditcard.fill", label: "登记收租", color: .themeBlue) {
+                                showAddRent = true
+                            }
+                            QuickActionItem(icon: "arrow.up.circle.fill", label: "新增包租", color: Color(hex: "6B3FA0")) {
+                                showAddPayout = true
+                            }
+                            QuickActionItem(icon: "dollarsign.circle.fill", label: "新增收入", color: Color(hex: "2E8B57")) {
+                                showAddIncome = true
+                            }
+                            QuickActionItem(icon: "dollarsign.circle.fill", label: "新增支出", color: Color(hex: "CD5C5C")) {
+                                showAddExpense = true
+                            }
+                            QuickActionItem(icon: "bolt.fill", label: "水电结算", color: .themeAmber) {
+                                showUtility = true
+                            }
+                        }
+                    }
+                    .padding(14)
+                    .background(Color.themePanel)
+                    .cornerRadius(14)
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.themeBorder, lineWidth: 1))
+                    .padding(.horizontal)
+
                     // KPI 看板
                 VStack(spacing: 0) {
                     // 第一行：在管房间、即将到期

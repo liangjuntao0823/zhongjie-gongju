@@ -137,9 +137,9 @@ struct RentCollectionView: View {
             .sheet(isPresented: $showingAddProperty) { AddPropertyView() }
             .sheet(item: $selectedProperty) { prop in PropertyDetailView(property: prop) }
             .sheet(isPresented: $showUtility) { NavigationStack { UtilityView() } }
-            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.commaSeparatedText]) { result in
+            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item]) { result in
                 if case .success(let url) = result {
-                    importFromCSV(url: url)
+                    importFromFile(url: url)
                 }
             }
             .sheet(item: $exportURL) { url in
@@ -154,7 +154,10 @@ struct RentCollectionView: View {
 
     // MARK: - 导出图片
     private func exportToImage() {
-        let dateStr = DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short)
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "zh_CN")
+        df.dateFormat = "yyyy年M月d日 HH:mm"
+        let dateStr = df.string(from: Date())
         let currentMonth = Calendar.current.component(.month, from: Date())
         let rows = filteredProperties.map { prop -> [String] in
             let paid = prop.monthlyRentRecords.contains { $0.month == currentMonth && $0.isPaid }
@@ -178,31 +181,79 @@ struct RentCollectionView: View {
         }
     }
 
-    // MARK: - 导出Excel(CSV)
+    // MARK: - 导出Excel(.xls)
     private func exportToExcel() {
-        var csv = "\u{FEFF}房号,房东,户型,月租金,交租日,房源类型,备注\n"
-        for prop in filteredProperties {
-            csv += "\(prop.roomNumber),\(prop.landlord),\(prop.unitType),\(Int(prop.rent)),\(prop.rentDueDay),\(prop.propertyType),\(prop.notes)\n"
-        }
-        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("收租记录-\(Int(Date().timeIntervalSince1970)).csv")
-        try? csv.write(to: fileURL, atomically: true, encoding: .utf8)
+        let headers = ["房号","房东","户型","月租金","交租日","房源类型","备注"]
+        let rows = filteredProperties.map { [
+            $0.roomNumber, $0.landlord, $0.unitType, "\(Int($0.rent))",
+            "\($0.rentDueDay)", $0.propertyType, $0.notes
+        ]}
+        let html = makeExcelHTML(title: "收租记录", headers: headers, rows: rows)
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("收租记录-\(Int(Date().timeIntervalSince1970)).xls")
+        try? html.write(to: fileURL, atomically: true, encoding: .utf8)
         exportURL = ExportURL(url: fileURL)
     }
 
     private func exportTemplate() {
-        let csv = "\u{FEFF}房号,房东,户型,月租金,交租日,房源类型,备注\n1-101,张三,单间上层,1000,1,普通收租,示例\n"
-        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("收租记录-模板.csv")
-        try? csv.write(to: fileURL, atomically: true, encoding: .utf8)
+        let headers = ["房号","房东","户型","月租金","交租日","房源类型","备注"]
+        let rows = [["1-101","张三","单间上层","1000","1","普通收租","示例"]]
+        let html = makeExcelHTML(title: "收租记录", headers: headers, rows: rows)
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("收租记录-模板.xls")
+        try? html.write(to: fileURL, atomically: true, encoding: .utf8)
         exportURL = ExportURL(url: fileURL)
     }
 
-    private func importFromCSV(url: URL) {
-        guard url.startAccessingSecurityScopedResource() else { return }
-        defer { url.stopAccessingSecurityScopedResource() }
-        guard let content = try? String(contentsOf: url, encoding: .utf8) else { return }
-        let lines = content.components(separatedBy: .newlines).dropFirst()
-        for line in lines {
-            let cols = line.components(separatedBy: ",")
+    private func importFromFile(url: URL) {
+        let didAccess = url.startAccessingSecurityScopedResource()
+        defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
+        var content: String?
+        if var data = try? Data(contentsOf: url) {
+            if data.count >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
+                data = data.subdata(in: 3..<data.count)
+            }
+            content = String(data: data, encoding: .utf8)
+            if content == nil {
+                let gbk = CFStringEncodings.GB_18030_2000.rawValue
+                let encoding = CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(gbk))
+                content = String(data: data, encoding: String.Encoding(rawValue: encoding))
+            }
+        }
+        guard let text = content else { return }
+
+        var rows: [[String]] = []
+        if text.contains("<tr") {
+            let trPattern = try? NSRegularExpression(pattern: "<tr[^>]*>(.*?)</tr>", options: [.dotMatchesLineSeparators, .caseInsensitive])
+            let tdPattern = try? NSRegularExpression(pattern: "<t[dh][^>]*>(.*?)</t[dh]>", options: [.dotMatchesLineSeparators, .caseInsensitive])
+            if let trMatches = trPattern?.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+                for trMatch in trMatches {
+                    if let trRange = Range(trMatch.range(at: 1), in: text) {
+                        let trContent = String(text[trRange])
+                        var row: [String] = []
+                        if let tdMatches = tdPattern?.matches(in: trContent, range: NSRange(trContent.startIndex..., in: trContent)) {
+                            for tdMatch in tdMatches {
+                                if let tdRange = Range(tdMatch.range(at: 1), in: trContent) {
+                                    var cell = String(trContent[tdRange])
+                                    cell = cell.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+                                    cell = cell.trimmingCharacters(in: .whitespacesAndNewlines)
+                                    row.append(cell)
+                                }
+                            }
+                        }
+                        if !row.isEmpty { rows.append(row) }
+                    }
+                }
+            }
+            if !rows.isEmpty { rows.removeFirst() }
+        } else {
+            let lines = text.components(separatedBy: .newlines).dropFirst()
+            for line in lines {
+                let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { continue }
+                rows.append(trimmed.components(separatedBy: ","))
+            }
+        }
+
+        for cols in rows {
             guard cols.count >= 5 else { continue }
             let prop = Property(
                 roomNumber: cols[0], landlord: cols[1], unitType: cols[2],
