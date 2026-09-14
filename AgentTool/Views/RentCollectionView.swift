@@ -149,58 +149,59 @@ struct RentCollectionView: View {
 
     // MARK: - 导出PDF
     private func exportToPDF() {
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("收租记录-\(Int(Date().timeIntervalSince1970)).pdf")
         let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 595, height: 842))
+        do {
+            try renderer.writePDF(to: fileURL) { context in
+                let cgContext = context.cgContext
+                cgContext.setFillColor(UIColor.black.cgColor)
 
-        let pdfData = renderer.pdfData() { context in
-            let cgContext = context.cgContext
-            cgContext.setFillColor(UIColor.black.cgColor)
+                let titleAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 18)]
+                ("收租记录" as NSString).draw(at: CGPoint(x: 40, y: 40), withAttributes: titleAttrs)
 
-            let titleAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 18)]
-            ("收租记录" as NSString).draw(at: CGPoint(x: 40, y: 40), withAttributes: titleAttrs)
+                let dateAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 10), .foregroundColor: UIColor.gray]
+                ("导出时间: \(DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short))" as NSString).draw(at: CGPoint(x: 40, y: 65), withAttributes: dateAttrs)
 
-            let dateAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 10), .foregroundColor: UIColor.gray]
-            ("导出时间: \(DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short))" as NSString).draw(at: CGPoint(x: 40, y: 65), withAttributes: dateAttrs)
+                cgContext.setFillColor(UIColor(red: 0.08, green: 0.23, blue: 0.20, alpha: 1.0).cgColor)
+                cgContext.fill(CGRect(x: 40, y: 90, width: 515, height: 25))
 
-            cgContext.setFillColor(UIColor(red: 0.08, green: 0.23, blue: 0.20, alpha: 1.0).cgColor)
-            cgContext.fill(CGRect(x: 40, y: 90, width: 515, height: 25))
-
-            let headerAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 10), .foregroundColor: UIColor.white]
-            let colAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 9)]
-            let headers = ["房号", "房东", "户型", "月租", "交租日", "类型", "本月状态"]
-            let widths: [CGFloat] = [80, 70, 80, 70, 60, 70, 85]
-            var x: CGFloat = 45
-            for (i, h) in headers.enumerated() {
-                (h as NSString).draw(at: CGPoint(x: x, y: 96), withAttributes: headerAttrs)
-                x += widths[i]
-            }
-
-            let currentMonth = Calendar.current.component(.month, from: Date())
-            var y: CGFloat = 120
-            for prop in filteredProperties {
-                if y > 800 { context.beginPage(); y = 40 }
-                let paid = prop.monthlyRentRecords.contains { $0.month == currentMonth && $0.isPaid }
-                let vals = [prop.roomNumber, prop.landlord, prop.unitType,
-                            "¥\(Int(prop.rent))", "\(prop.rentDueDay)号",
-                            prop.propertyType, paid ? "已收" : "未收"]
-                x = 45
-                for (i, v) in vals.enumerated() {
-                    (v as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: colAttrs)
+                let headerAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 10), .foregroundColor: UIColor.white]
+                let colAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 9)]
+                let headers = ["房号", "房东", "户型", "月租", "交租日", "类型", "本月状态"]
+                let widths: [CGFloat] = [80, 70, 80, 70, 60, 70, 85]
+                var x: CGFloat = 45
+                for (i, h) in headers.enumerated() {
+                    (h as NSString).draw(at: CGPoint(x: x, y: 96), withAttributes: headerAttrs)
                     x += widths[i]
                 }
-                y += 18
+
+                let currentMonth = Calendar.current.component(.month, from: Date())
+                var y: CGFloat = 120
+                for prop in filteredProperties {
+                    if y > 800 { context.beginPage(); y = 40 }
+                    let paid = prop.monthlyRentRecords.contains { $0.month == currentMonth && $0.isPaid }
+                    let vals = [prop.roomNumber, prop.landlord, prop.unitType,
+                                "¥\(Int(prop.rent))", "\(prop.rentDueDay)号",
+                                prop.propertyType, paid ? "已收" : "未收"]
+                    x = 45
+                    for (i, v) in vals.enumerated() {
+                        (v as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: colAttrs)
+                        x += widths[i]
+                    }
+                    y += 18
+                }
+
+                let totalAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 11)]
+                ("共 \(filteredProperties.count) 套房源" as NSString).draw(at: CGPoint(x: 40, y: 810), withAttributes: totalAttrs)
             }
-
-            let totalAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 11)]
-            ("共 \(filteredProperties.count) 套房源" as NSString).draw(at: CGPoint(x: 40, y: 810), withAttributes: totalAttrs)
+            exportURL = ExportURL(url: fileURL)
+        } catch {
+            print("PDF导出失败: \(error)")
         }
-
-        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("收租记录-\(Int(Date().timeIntervalSince1970)).pdf")
-        try? pdfData.write(to: fileURL)
-        exportURL = ExportURL(url: fileURL)
     }
 
     private func exportTemplate() {
-        let csv = "房号,房东,户型,月租金,交租日,房源类型,备注\n1-101,张三,单间上层,1000,1,普通收租,示例\n"
+        let csv = "\u{FEFF}房号,房东,户型,月租金,交租日,房源类型,备注\n1-101,张三,单间上层,1000,1,普通收租,示例\n"
         let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("收租记录-模板.csv")
         try? csv.write(to: fileURL, atomically: true, encoding: .utf8)
         exportURL = ExportURL(url: fileURL)
@@ -484,8 +485,8 @@ struct AddPropertyView: View {
     @State private var rentText = ""
     @State private var depositText = ""
     @State private var prepaymentText = ""
-    @State private var leaseStart = ""
-    @State private var leaseEnd = ""
+    @State private var leaseStartDate = Date()
+    @State private var leaseEndDate = Date()
     @State private var leaseDuration = ""
     @State private var rentDueDay = 1
     @State private var waterMeterBase = 0
@@ -506,8 +507,8 @@ struct AddPropertyView: View {
                     Picker("房源类型", selection: $propertyType) { ForEach(types, id: \.self) { Text($0).tag($0) } }
                 }
                 Section("租赁信息") {
-                    TextField("起租日", text: $leaseStart)
-                    TextField("到期日", text: $leaseEnd)
+                    WheelDateField(label: "起租日", date: $leaseStartDate)
+                    WheelDateField(label: "到期日", date: $leaseEndDate)
                     TextField("租期", text: $leaseDuration)
                     Picker("交租日", selection: $rentDueDay) {
                         ForEach(1...31, id: \.self) { day in Text("每月\(day)号").tag(day) }
@@ -536,10 +537,12 @@ struct AddPropertyView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
+                        let df = DateFormatter()
+                        df.dateFormat = "yyyy.M.d"
                         let prop = Property(roomNumber: roomNumber, landlord: landlord, unitType: unitType,
                             rent: Double(rentText) ?? 0, deposit: Double(depositText) ?? 0,
-                            prepayment: Double(prepaymentText) ?? 0, leaseStart: leaseStart,
-                            leaseEnd: leaseEnd, leaseDuration: leaseDuration, rentDueDay: rentDueDay,
+                            prepayment: Double(prepaymentText) ?? 0, leaseStart: df.string(from: leaseStartDate),
+                            leaseEnd: df.string(from: leaseEndDate), leaseDuration: leaseDuration, rentDueDay: rentDueDay,
                             waterMeterBase: waterMeterBase, electricMeterBase: electricMeterBase,
                             propertyType: propertyType, notes: notes)
                         modelContext.insert(prop)

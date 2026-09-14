@@ -69,43 +69,46 @@ struct PayoutView: View {
     }
 
     private func exportToPDF() {
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("打租记录-\(Int(Date().timeIntervalSince1970)).pdf")
         let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 595, height: 842))
-        let pdfData = renderer.pdfData() { context in
-            let cg = context.cgContext
-            cg.setFillColor(UIColor.black.cgColor)
-            ("包租打租记录" as NSString).draw(at: CGPoint(x: 40, y: 40), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 18)])
-            ("导出时间: \(DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short))" as NSString).draw(at: CGPoint(x: 40, y: 65), withAttributes: [.font: UIFont.systemFont(ofSize: 10), .foregroundColor: UIColor.gray])
-            cg.setFillColor(UIColor(red: 0.08, green: 0.23, blue: 0.20, alpha: 1.0).cgColor)
-            cg.fill(CGRect(x: 40, y: 90, width: 515, height: 25))
-            let headers = ["房号", "管理人", "户型", "年租金", "月打租", "免租期", "支付方式"]
-            let widths: [CGFloat] = [80, 70, 80, 80, 80, 60, 65]
-            var x: CGFloat = 45
-            for (i, h) in headers.enumerated() {
-                (h as NSString).draw(at: CGPoint(x: x, y: 96), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 10), .foregroundColor: UIColor.white])
-                x += widths[i]
-            }
-            var y: CGFloat = 120
-            for p in payouts {
-                if y > 800 { context.beginPage(); y = 40 }
-                let monthlyPayout = p.annualRent / 12
-                let vals = [p.roomNumber, p.manager, p.unitType, "¥\(Int(p.annualRent))",
-                            "¥\(Int(monthlyPayout))", "\(p.rentFreeDays)天", p.paymentMethod]
-                x = 45
-                for (i, v) in vals.enumerated() {
-                    (v as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: [.font: UIFont.systemFont(ofSize: 9)])
+        do {
+            try renderer.writePDF(to: fileURL) { context in
+                let cg = context.cgContext
+                cg.setFillColor(UIColor.black.cgColor)
+                ("包租打租记录" as NSString).draw(at: CGPoint(x: 40, y: 40), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 18)])
+                ("导出时间: \(DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short))" as NSString).draw(at: CGPoint(x: 40, y: 65), withAttributes: [.font: UIFont.systemFont(ofSize: 10), .foregroundColor: UIColor.gray])
+                cg.setFillColor(UIColor(red: 0.08, green: 0.23, blue: 0.20, alpha: 1.0).cgColor)
+                cg.fill(CGRect(x: 40, y: 90, width: 515, height: 25))
+                let headers = ["房号", "管理人", "户型", "年租金", "月打租", "免租期", "支付方式"]
+                let widths: [CGFloat] = [80, 70, 80, 80, 80, 60, 65]
+                var x: CGFloat = 45
+                for (i, h) in headers.enumerated() {
+                    (h as NSString).draw(at: CGPoint(x: x, y: 96), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 10), .foregroundColor: UIColor.white])
                     x += widths[i]
                 }
-                y += 18
+                var y: CGFloat = 120
+                for p in payouts {
+                    if y > 800 { context.beginPage(); y = 40 }
+                    let monthlyPayout = p.annualRent / 12
+                    let vals = [p.roomNumber, p.manager, p.unitType, "¥\(Int(p.annualRent))",
+                                "¥\(Int(monthlyPayout))", "\(p.rentFreeDays)天", p.paymentMethod]
+                    x = 45
+                    for (i, v) in vals.enumerated() {
+                        (v as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: [.font: UIFont.systemFont(ofSize: 9)])
+                        x += widths[i]
+                    }
+                    y += 18
+                }
+                ("共 \(payouts.count) 条记录" as NSString).draw(at: CGPoint(x: 40, y: 810), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 11)])
             }
-            ("共 \(payouts.count) 条记录" as NSString).draw(at: CGPoint(x: 40, y: 810), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 11)])
+            exportURL = ExportURL(url: fileURL)
+        } catch {
+            print("PDF导出失败: \(error)")
         }
-        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("打租记录-\(Int(Date().timeIntervalSince1970)).pdf")
-        try? pdfData.write(to: fileURL)
-        exportURL = ExportURL(url: fileURL)
     }
 
     private func exportTemplate() {
-        let csv = "房号,管理人,户型,起租日,到期日,年租金,免租期,支付方式,备注\n1-101,李四,单间上层,2026-01-01,2027-12-31,12000,15,月付,示例\n"
+        let csv = "\u{FEFF}房号,管理人,户型,起租日,到期日,年租金,免租期,支付方式,备注\n1-101,李四,单间上层,2026-01-01,2027-12-31,12000,15,月付,示例\n"
         let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("打租记录-模板.csv")
         try? csv.write(to: fileURL, atomically: true, encoding: .utf8)
         exportURL = ExportURL(url: fileURL)
@@ -315,10 +318,8 @@ struct AddPayoutView: View {
                     Picker("户型", selection: $unitType) { Text("请选择").tag(""); ForEach(unitTypes, id: \.self) { Text($0).tag($0) } }
                 }
                 Section("租赁信息") {
-                    DatePicker("起租期", selection: $leaseStartDate, displayedComponents: .date)
-                        .datePickerStyle(.compact)
-                    DatePicker("到期日", selection: $leaseEndDate, displayedComponents: .date)
-                        .datePickerStyle(.compact)
+                    WheelDateField(label: "起租期", date: $leaseStartDate)
+                    WheelDateField(label: "到期日", date: $leaseEndDate)
                     TextField("租期（自由输入）", text: $leaseDuration)
                     Stepper(value: $rentFreeDays, in: 0...365) {
                         HStack { Text("免租期"); Spacer(); Text("\(rentFreeDays)天").foregroundColor(.themeText2) }

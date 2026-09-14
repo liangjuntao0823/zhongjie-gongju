@@ -64,6 +64,12 @@ final class DataManager: ObservableObject {
         let profitDescriptor = FetchDescriptor<ProfitCalculation>()
         let profits = (try? modelContext.fetch(profitDescriptor)) ?? []
 
+        let incomeDescriptor = FetchDescriptor<MiscIncome>()
+        let incomes = (try? modelContext.fetch(incomeDescriptor)) ?? []
+
+        let expenseDescriptor = FetchDescriptor<MiscExpense>()
+        let expenses = (try? modelContext.fetch(expenseDescriptor)) ?? []
+
         // 在租房源数
         let activeProperties = properties.filter { !$0.leaseStart.isEmpty }
 
@@ -97,6 +103,27 @@ final class DataManager: ObservableObject {
         // 包租盈亏
         let totalNetProfit = profits.reduce(0) { $0 + $1.netProfit }
 
+        // 本月杂项收入
+        var monthlyMiscIncome: Double = 0
+        for inc in incomes {
+            let comps = calendar.dateComponents([.month, .year], from: inc.date)
+            if comps.month == currentMonth && comps.year == currentYear {
+                monthlyMiscIncome += inc.amount
+            }
+        }
+
+        // 本月杂项支出
+        var monthlyMiscExpense: Double = 0
+        for exp in expenses {
+            let comps = calendar.dateComponents([.month, .year], from: exp.date)
+            if comps.month == currentMonth && comps.year == currentYear {
+                monthlyMiscExpense += exp.amount
+            }
+        }
+
+        // 本月收入 = 中介费 + 杂项收入 - 杂项支出
+        let monthlyNetIncome = monthlyDealFee + monthlyMiscIncome - monthlyMiscExpense
+
         // 即将到期（30天内）
         var expiringSoon: [Property] = []
         let dateFormatter = DateFormatter()
@@ -121,7 +148,10 @@ final class DataManager: ObservableObject {
             packageProfit: totalNetProfit,
             expiringSoon: expiringSoon,
             currentMonth: currentMonth,
-            currentYear: currentYear
+            currentYear: currentYear,
+            monthlyMiscIncome: monthlyMiscIncome,
+            monthlyMiscExpense: monthlyMiscExpense,
+            monthlyNetIncome: monthlyNetIncome
         )
     }
 }
@@ -138,4 +168,7 @@ struct DashboardStats {
     var expiringSoon: [Property]
     var currentMonth: Int
     var currentYear: Int
+    var monthlyMiscIncome: Double
+    var monthlyMiscExpense: Double
+    var monthlyNetIncome: Double
 }

@@ -162,14 +162,14 @@ struct AddProfitView: View {
                     AmountField(label: "包租总金额", text: $totalPackageAmountText)
                 }
                 Section("包租周期") {
-                    DatePicker("包租起", selection: $packageStart, displayedComponents: .date)
-                    DatePicker("包租止", selection: $packageEnd, displayedComponents: .date)
+                    WheelDateField(label: "包租起", date: $packageStart)
+                    WheelDateField(label: "包租止", date: $packageEnd)
                     HStack { Text("空置期(天)").foregroundColor(.themeText); Spacer(); TextField("请输入", text: $vacancyDaysText).keyboardType(.numberPad).multilineTextAlignment(.trailing).foregroundColor(.themeText).frame(width: 120) }
                 }
                 Section("出租信息") {
                     AmountField(label: "租客月租金", text: $tenantMonthlyRentText)
-                    DatePicker("出租起", selection: $rentStart, displayedComponents: .date)
-                    DatePicker("出租止", selection: $rentEnd, displayedComponents: .date)
+                    WheelDateField(label: "出租起", date: $rentStart)
+                    WheelDateField(label: "出租止", date: $rentEnd)
                 }
                 Section("备注") { TextField("备注", text: $notes, axis: .vertical) }
                 Section("预览") {

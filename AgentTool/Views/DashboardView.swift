@@ -7,6 +7,11 @@ struct DashboardView: View {
     @State private var stats: DashboardStats?
     @State private var currentTime = Date()
     @State private var showUtility = false
+    @State private var showAddDeal = false
+    @State private var showAddRent = false
+    @State private var showAddPayout = false
+    @State private var showAddIncome = false
+    @State private var showAddExpense = false
 
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
@@ -116,13 +121,25 @@ struct DashboardView: View {
                             .foregroundColor(.themeText2)
                     }
                     Spacer()
-                    ZStack {
-                        Circle()
-                            .fill(Color.themeRed.opacity(0.1))
-                            .frame(width: 38, height: 38)
-                        Image(systemName: "bell.fill")
-                            .foregroundColor(.themeRed)
-                            .font(.system(size: 16))
+                    Button {
+                        tabRouter.selectedTab = 2
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(Color.themeRed.opacity(0.1))
+                                .frame(width: 38, height: 38)
+                            Image(systemName: "bell.fill")
+                                .foregroundColor(.themeRed)
+                                .font(.system(size: 16))
+                            if !upcomingRentReminders.isEmpty {
+                                Text("\(upcomingRentReminders.count)")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 16, height: 16)
+                                    .background(Circle().fill(Color.themeRed))
+                                    .offset(x: 10, y: -10)
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal)
@@ -151,18 +168,24 @@ struct DashboardView: View {
                 .cornerRadius(14)
                 .padding(.horizontal)
 
-                // 快捷操作（移到KPI上方）
+                // 快捷操作
                 VStack(alignment: .leading, spacing: 12) {
                     SectionTitle(title: "快捷操作")
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
                         QuickActionItem(icon: "plus.circle.fill", label: "新增成交", color: .themeAccent) {
-                            tabRouter.selectedTab = 1
+                            showAddDeal = true
                         }
                         QuickActionItem(icon: "creditcard.fill", label: "登记收租", color: .themeBlue) {
-                            tabRouter.selectedTab = 2
+                            showAddRent = true
                         }
                         QuickActionItem(icon: "arrow.up.circle.fill", label: "包租打租", color: Color(hex: "6B3FA0")) {
-                            tabRouter.selectedTab = 3
+                            showAddPayout = true
+                        }
+                        QuickActionItem(icon: "dollarsign.circle.fill", label: "新增收入", color: Color(hex: "2E8B57")) {
+                            showAddIncome = true
+                        }
+                        QuickActionItem(icon: "dollarsign.circle.fill", label: "新增支出", color: Color(hex: "CD5C5C")) {
+                            showAddExpense = true
                         }
                         QuickActionItem(icon: "bolt.fill", label: "水电结算", color: .themeAmber) {
                             showUtility = true
@@ -175,51 +198,79 @@ struct DashboardView: View {
                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.themeBorder, lineWidth: 1))
                 .padding(.horizontal)
 
-                // KPI 网格
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                    KpiCard(
-                        label: "在管房间",
-                        value: "\(stats?.activeProperties ?? 0)",
-                        unit: "套",
-                        foot: "共\(stats?.totalProperties ?? 0)套",
-                        style: .normal
-                    )
-                    KpiCard(
-                        label: "本月应收",
-                        value: "\(Int(stats?.monthlyRentReceivable ?? 0))",
-                        unit: "元",
-                        foot: "已收\(Int(stats?.monthlyRentCollected ?? 0))",
-                        style: .normal
-                    )
-                    KpiCard(
-                        label: "本月中介费",
-                        value: "\(Int(stats?.monthlyDealFee ?? 0))",
-                        unit: "元",
-                        foot: "累计\(stats?.totalDeals ?? 0)单",
-                        style: .normal
-                    )
-                    KpiCard(
-                        label: "包租盈亏",
-                        value: "\(Int(stats?.packageProfit ?? 0))",
-                        unit: "元",
-                        foot: (stats?.packageProfit ?? 0) >= 0 ? "盈利中" : "亏损",
-                        style: (stats?.packageProfit ?? 0) >= 0 ? .normal : .alert
-                    )
-                    KpiCard(
-                        label: "托管房源",
-                        value: "\(stats?.managedProperties ?? 0)",
-                        unit: "套",
-                        foot: "包租+托管",
-                        style: .normal
-                    )
-                    KpiCard(
-                        label: "即将到期",
-                        value: "\(stats?.expiringSoon.count ?? 0)",
-                        unit: "套",
-                        foot: "30天内",
-                        style: (stats?.expiringSoon.count ?? 0) > 0 ? .alert : .normal
-                    )
+                // KPI 看板
+                VStack(spacing: 0) {
+                    // 第一行：在管房间、即将到期
+                    HStack(spacing: 10) {
+                        KpiCard(
+                            label: "在管房间",
+                            value: "\(stats?.activeProperties ?? 0)",
+                            unit: "套",
+                            foot: "在管\(stats?.activeProperties ?? 0)套 · 托管/包租\(stats?.managedProperties ?? 0)套",
+                            style: .normal
+                        )
+                        KpiCard(
+                            label: "即将到期",
+                            value: "\(stats?.expiringSoon.count ?? 0)",
+                            unit: "套",
+                            foot: "30天内到期",
+                            style: (stats?.expiringSoon.count ?? 0) > 0 ? .alert : .normal
+                        )
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+
+                    // 分界虚线
+                    HStack {
+                        Rectangle()
+                            .fill(Color.themeBorder)
+                            .frame(height: 1)
+                            .overlay(
+                                Rectangle()
+                                    .stroke(style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                                    .foregroundColor(Color.themeBorder)
+                            )
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+
+                    // 第二行：本月中介费、杂项收入、杂项支出、本月收入
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                        KpiCard(
+                            label: "本月中介费",
+                            value: "\(Int(stats?.monthlyDealFee ?? 0))",
+                            unit: "元",
+                            foot: "累计\(stats?.totalDeals ?? 0)单",
+                            style: .normal
+                        )
+                        KpiCard(
+                            label: "杂项收入",
+                            value: "\(Int(stats?.monthlyMiscIncome ?? 0))",
+                            unit: "元",
+                            foot: "本月",
+                            style: .normal
+                        )
+                        KpiCard(
+                            label: "杂项支出",
+                            value: "\(Int(stats?.monthlyMiscExpense ?? 0))",
+                            unit: "元",
+                            foot: "本月",
+                            style: .normal
+                        )
+                        KpiCard(
+                            label: "本月收入",
+                            value: "\(Int(stats?.monthlyNetIncome ?? 0))",
+                            unit: "元",
+                            foot: "中介费+收入-支出",
+                            style: (stats?.monthlyNetIncome ?? 0) >= 0 ? .normal : .alert
+                        )
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
                 }
+                .background(Color.themePanel)
+                .cornerRadius(14)
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.themeBorder, lineWidth: 1))
                 .padding(.horizontal)
 
                 // 收租进度
@@ -356,6 +407,21 @@ struct DashboardView: View {
         }
         .sheet(isPresented: $showUtility) {
             NavigationStack { UtilityView() }
+        }
+        .sheet(isPresented: $showAddDeal) {
+            NavigationStack { AddDealView() }
+        }
+        .sheet(isPresented: $showAddRent) {
+            NavigationStack { AddPropertyView() }
+        }
+        .sheet(isPresented: $showAddPayout) {
+            NavigationStack { AddPayoutView() }
+        }
+        .sheet(isPresented: $showAddIncome) {
+            NavigationStack { AddMiscView(type: .income) }
+        }
+        .sheet(isPresented: $showAddExpense) {
+            NavigationStack { AddMiscView(type: .expense) }
         }
         .navigationTitle("工作台")
         .navigationBarHidden(true)

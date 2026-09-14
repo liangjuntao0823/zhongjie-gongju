@@ -19,7 +19,7 @@ struct DealsView: View {
     @State private var showFileImporter = false
     @State private var exportURL: ExportURL?
 
-    private let availableYears = [2024, 2025, 2026, 2027, 2028]
+    private let availableYears = [2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035]
 
     private var filteredDeals: [DealRecord] {
         deals.filter { deal in
@@ -86,23 +86,7 @@ struct DealsView: View {
                     .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.themeBorder, lineWidth: 1))
 
                     HStack(spacing: 8) {
-                        Picker("年份", selection: $selectedYear) {
-                            Text("全部年").tag(nil as Int?)
-                            ForEach(availableYears, id: \.self) { year in
-                                Text("\(year)年").tag(year as Int?)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .tint(.themeAccent)
-
-                        Picker("月份", selection: $selectedMonth) {
-                            Text("全部月").tag(nil as Int?)
-                            ForEach(1...12, id: \.self) { m in
-                                Text("\(m)月").tag(m as Int?)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .tint(.themeAccent)
+                        WheelYearMonthPicker(year: $selectedYear, month: $selectedMonth)
 
                         Spacer()
 
@@ -202,112 +186,114 @@ struct DealsView: View {
 
     // MARK: - 导出PDF
     private func exportToPDF() {
-        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 595, height: 842), format: UIGraphicsPDFRendererFormat())
-
         let title = selectedTab == 0 ? "成交记录" : (selectedTab == 1 ? "杂项收入" : "杂项支出")
         let records = selectedTab == 0 ? filteredDeals.count : (selectedTab == 1 ? filteredIncomes.count : filteredExpenses.count)
 
-        let pdfData = renderer.pdfData() { context in
-            let cgContext = context.cgContext
-            cgContext.setFillColor(UIColor.black.cgColor)
-
-            // 标题
-            let titleFont = UIFont.boldSystemFont(ofSize: 18)
-            let titleAttrs: [NSAttributedString.Key: Any] = [.font: titleFont]
-            (title as NSString).draw(at: CGPoint(x: 40, y: 40), withAttributes: titleAttrs)
-
-            // 日期
-            let dateFont = UIFont.systemFont(ofSize: 10)
-            let dateAttrs: [NSAttributedString.Key: Any] = [.font: dateFont, .foregroundColor: UIColor.gray]
-            let dateStr = "导出时间: \(DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short))"
-            (dateStr as NSString).draw(at: CGPoint(x: 40, y: 65), withAttributes: dateAttrs)
-
-            // 表头
-            let headerFont = UIFont.boldSystemFont(ofSize: 10)
-            let headerAttrs: [NSAttributedString.Key: Any] = [.font: headerFont, .foregroundColor: UIColor.white]
-            cgContext.setFillColor(UIColor(red: 0.08, green: 0.23, blue: 0.20, alpha: 1.0).cgColor)
-            cgContext.fill(CGRect(x: 40, y: 90, width: 515, height: 25))
-
-            let colFont = UIFont.systemFont(ofSize: 9)
-            let colAttrs: [NSAttributedString.Key: Any] = [.font: colFont]
-
-            if selectedTab == 0 {
-                let headers = ["日期", "房号", "房东", "户型", "租金", "中介费", "备注"]
-                let widths: [CGFloat] = [70, 70, 60, 70, 60, 70, 115]
-                var x: CGFloat = 45
-                for (i, h) in headers.enumerated() {
-                    (h as NSString).draw(at: CGPoint(x: x, y: 96), withAttributes: headerAttrs)
-                    x += widths[i]
-                }
-                var y: CGFloat = 120
-                for deal in filteredDeals {
-                    if y > 800 {
-                        context.beginPage()
-                        y = 40
-                    }
-                    let vals = [
-                        DateFormatter.localizedString(from: deal.date, dateStyle: .short, timeStyle: .none),
-                        deal.roomNumber, deal.landlord, deal.unitType,
-                        "¥\(Int(deal.rent))", "¥\(Int(deal.totalFee))", deal.notes
-                    ]
-                    x = 45
-                    for (i, v) in vals.enumerated() {
-                        (v as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: colAttrs)
-                        x += widths[i]
-                    }
-                    y += 18
-                }
-            } else {
-                let headers = ["日期", "项目", "金额", "备注"]
-                let widths: [CGFloat] = [100, 150, 100, 165]
-                var x: CGFloat = 45
-                for (i, h) in headers.enumerated() {
-                    (h as NSString).draw(at: CGPoint(x: x, y: 96), withAttributes: headerAttrs)
-                    x += widths[i]
-                }
-                var y: CGFloat = 120
-                let items = selectedTab == 1 ? filteredIncomes.map { ($0.date, $0.item, $0.amount, $0.notes) } : filteredExpenses.map { ($0.date, $0.item, $0.amount, $0.notes) }
-                for item in items {
-                    if y > 800 {
-                        context.beginPage()
-                        y = 40
-                    }
-                    let vals = [
-                        DateFormatter.localizedString(from: item.0, dateStyle: .short, timeStyle: .none),
-                        item.1, "¥\(Int(item.2))", item.3
-                    ]
-                    x = 45
-                    for (i, v) in vals.enumerated() {
-                        (v as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: colAttrs)
-                        x += widths[i]
-                    }
-                    y += 18
-                }
-            }
-
-            // 底部统计
-            let totalFont = UIFont.boldSystemFont(ofSize: 11)
-            let totalAttrs: [NSAttributedString.Key: Any] = [.font: totalFont]
-            let totalStr = "共 \(records) 条记录"
-            (totalStr as NSString).draw(at: CGPoint(x: 40, y: 810), withAttributes: totalAttrs)
-        }
-
         let tempDir = FileManager.default.temporaryDirectory
         let fileURL = tempDir.appendingPathComponent("\(title)-\(Int(Date().timeIntervalSince1970)).pdf")
-        try? pdfData.write(to: fileURL)
-        exportURL = ExportURL(url: fileURL)
+
+        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 595, height: 842))
+        do {
+            try renderer.writePDF(to: fileURL) { context in
+                let cgContext = context.cgContext
+                cgContext.setFillColor(UIColor.black.cgColor)
+
+                // 标题
+                let titleFont = UIFont.boldSystemFont(ofSize: 18)
+                let titleAttrs: [NSAttributedString.Key: Any] = [.font: titleFont]
+                (title as NSString).draw(at: CGPoint(x: 40, y: 40), withAttributes: titleAttrs)
+
+                // 日期
+                let dateFont = UIFont.systemFont(ofSize: 10)
+                let dateAttrs: [NSAttributedString.Key: Any] = [.font: dateFont, .foregroundColor: UIColor.gray]
+                let dateStr = "导出时间: \(DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short))"
+                (dateStr as NSString).draw(at: CGPoint(x: 40, y: 65), withAttributes: dateAttrs)
+
+                // 表头
+                let headerFont = UIFont.boldSystemFont(ofSize: 10)
+                let headerAttrs: [NSAttributedString.Key: Any] = [.font: headerFont, .foregroundColor: UIColor.white]
+                cgContext.setFillColor(UIColor(red: 0.08, green: 0.23, blue: 0.20, alpha: 1.0).cgColor)
+                cgContext.fill(CGRect(x: 40, y: 90, width: 515, height: 25))
+
+                let colFont = UIFont.systemFont(ofSize: 9)
+                let colAttrs: [NSAttributedString.Key: Any] = [.font: colFont]
+
+                if selectedTab == 0 {
+                    let headers = ["日期", "房号", "房东", "户型", "租金", "中介费", "备注"]
+                    let widths: [CGFloat] = [70, 70, 60, 70, 60, 70, 115]
+                    var x: CGFloat = 45
+                    for (i, h) in headers.enumerated() {
+                        (h as NSString).draw(at: CGPoint(x: x, y: 96), withAttributes: headerAttrs)
+                        x += widths[i]
+                    }
+                    var y: CGFloat = 120
+                    for deal in filteredDeals {
+                        if y > 800 {
+                            context.beginPage()
+                            y = 40
+                        }
+                        let vals = [
+                            DateFormatter.localizedString(from: deal.date, dateStyle: .short, timeStyle: .none),
+                            deal.roomNumber, deal.landlord, deal.unitType,
+                            "¥\(Int(deal.rent))", "¥\(Int(deal.totalFee))", deal.notes
+                        ]
+                        x = 45
+                        for (i, v) in vals.enumerated() {
+                            (v as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: colAttrs)
+                            x += widths[i]
+                        }
+                        y += 18
+                    }
+                } else {
+                    let headers = ["日期", "项目", "金额", "备注"]
+                    let widths: [CGFloat] = [100, 150, 100, 165]
+                    var x: CGFloat = 45
+                    for (i, h) in headers.enumerated() {
+                        (h as NSString).draw(at: CGPoint(x: x, y: 96), withAttributes: headerAttrs)
+                        x += widths[i]
+                    }
+                    var y: CGFloat = 120
+                    let items = selectedTab == 1 ? filteredIncomes.map { ($0.date, $0.item, $0.amount, $0.notes) } : filteredExpenses.map { ($0.date, $0.item, $0.amount, $0.notes) }
+                    for item in items {
+                        if y > 800 {
+                            context.beginPage()
+                            y = 40
+                        }
+                        let vals = [
+                            DateFormatter.localizedString(from: item.0, dateStyle: .short, timeStyle: .none),
+                            item.1, "¥\(Int(item.2))", item.3
+                        ]
+                        x = 45
+                        for (i, v) in vals.enumerated() {
+                            (v as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: colAttrs)
+                            x += widths[i]
+                        }
+                        y += 18
+                    }
+                }
+
+                // 底部统计
+                let totalFont = UIFont.boldSystemFont(ofSize: 11)
+                let totalAttrs: [NSAttributedString.Key: Any] = [.font: totalFont]
+                let totalStr = "共 \(records) 条记录"
+                (totalStr as NSString).draw(at: CGPoint(x: 40, y: 810), withAttributes: totalAttrs)
+            }
+            exportURL = ExportURL(url: fileURL)
+        } catch {
+            print("PDF导出失败: \(error)")
+        }
     }
 
     // MARK: - 导出Excel模板(CSV)
     private func exportTemplate() {
-        var csv = ""
+        var csv = "\u{FEFF}"
         if selectedTab == 0 {
-            csv = "成交日期,房号,房东,户型,起租期,到期日,租期,月租金,押金,预存,交租日,房东中介费,租客中介费,管理人,客源,备注\n"
+            csv += "成交日期,房号,房东,户型,起租期,到期日,租期,月租金,押金,预存,交租日,房东中介费,租客中介费,管理人,客源,备注\n"
             csv += "2026-01-15,1-101,张三,单间上层,2026-01-15,2027-01-14,一年,1000,1000,500,1,500,500,李四,58同城,示例数据\n"
         } else if selectedTab == 1 {
-            csv = "日期,项目,金额,备注\n2026-01-15,保洁费,200,示例\n"
+            csv += "日期,项目,金额,备注\n2026-01-15,保洁费,200,示例\n"
         } else {
-            csv = "日期,项目,金额,备注\n2026-01-15,维修费,300,示例\n"
+            csv += "日期,项目,金额,备注\n2026-01-15,维修费,300,示例\n"
         }
         let tempDir = FileManager.default.temporaryDirectory
         let title = selectedTab == 0 ? "成交记录" : (selectedTab == 1 ? "杂项收入" : "杂项支出")
@@ -606,18 +592,15 @@ struct AddDealView: View {
         NavigationStack {
             Form {
                 Section("基本信息") {
-                    DatePicker("成交日期", selection: $date, displayedComponents: .date)
-                        .datePickerStyle(.compact)
+                    WheelDateField(label: "成交日期", date: $date)
                     TextField("房号", text: $roomNumber)
                     TextField("房东", text: $landlord)
                     Picker("户型", selection: $unitType) {
                         Text("请选择").tag("")
                         ForEach(unitTypes, id: \.self) { Text($0).tag($0) }
                     }
-                    DatePicker("起租期", selection: $leaseStart, displayedComponents: .date)
-                        .datePickerStyle(.compact)
-                    DatePicker("到期日", selection: $leaseEnd, displayedComponents: .date)
-                        .datePickerStyle(.compact)
+                    WheelDateField(label: "起租期", date: $leaseStart)
+                    WheelDateField(label: "到期日", date: $leaseEnd)
                     TextField("租期（自由输入）", text: $leaseDuration)
                     Picker("交租日期", selection: $rentDueDay) {
                         ForEach(1...31, id: \.self) { day in
@@ -722,18 +705,15 @@ struct EditDealView: View {
         NavigationStack {
             Form {
                 Section("基本信息") {
-                    DatePicker("成交日期", selection: $date, displayedComponents: .date)
-                        .datePickerStyle(.compact)
+                    WheelDateField(label: "成交日期", date: $date)
                     TextField("房号", text: $roomNumber)
                     TextField("房东", text: $landlord)
                     Picker("户型", selection: $unitType) {
                         Text("请选择").tag("")
                         ForEach(unitTypes, id: \.self) { Text($0).tag($0) }
                     }
-                    DatePicker("起租期", selection: $leaseStart, displayedComponents: .date)
-                        .datePickerStyle(.compact)
-                    DatePicker("到期日", selection: $leaseEnd, displayedComponents: .date)
-                        .datePickerStyle(.compact)
+                    WheelDateField(label: "起租期", date: $leaseStart)
+                    WheelDateField(label: "到期日", date: $leaseEnd)
                     TextField("租期（自由输入）", text: $leaseDuration)
                     Picker("交租日期", selection: $rentDueDay) {
                         ForEach(1...31, id: \.self) { day in
@@ -809,8 +789,7 @@ struct AddMiscView: View {
         NavigationStack {
             Form {
                 Section("信息") {
-                    DatePicker("日期", selection: $date, displayedComponents: .date)
-                        .datePickerStyle(.compact)
+                    WheelDateField(label: "日期", date: $date)
                     TextField("项目", text: $item)
                     AmountField(label: "金额", text: $amountText)
                     TextField("备注", text: $notes, axis: .vertical)
@@ -876,8 +855,7 @@ struct EditMiscView: View {
         NavigationStack {
             Form {
                 Section("信息") {
-                    DatePicker("日期", selection: $date, displayedComponents: .date)
-                        .datePickerStyle(.compact)
+                    WheelDateField(label: "日期", date: $date)
                     TextField("项目", text: $title)
                     AmountField(label: "金额", text: $amountText)
                     TextField("备注", text: $notes, axis: .vertical)

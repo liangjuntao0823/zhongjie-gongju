@@ -205,3 +205,174 @@ struct GhostButton: View {
         }
     }
 }
+
+// MARK: - 轮盘式日期选择器
+struct WheelDateField: View {
+    let label: String
+    @Binding var date: Date
+    @State private var showPicker = false
+
+    private var dateString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy年M月d日"
+        formatter.locale = Locale(identifier: "zh_CN")
+        return formatter.string(from: date)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.themeText2)
+            Button {
+                showPicker = true
+            } label: {
+                HStack {
+                    Text(dateString)
+                        .font(.system(size: 15))
+                        .foregroundColor(.themeText)
+                    Spacer()
+                    Image(systemName: "calendar")
+                        .foregroundColor(.themeText3)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 11)
+                .background(Color.themeBg)
+                .cornerRadius(10)
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.themeBorder, lineWidth: 1))
+            }
+        }
+        .sheet(isPresented: $showPicker) {
+            WheelDatePickerSheet(date: $date, isPresented: $showPicker)
+        }
+    }
+}
+
+struct WheelDatePickerSheet: View {
+    @Binding var date: Date
+    @Binding var isPresented: Bool
+    @State private var tempDate: Date
+
+    init(date: Binding<Date>, isPresented: Binding<Bool>) {
+        _date = date
+        _isPresented = isPresented
+        _tempDate = State(initialValue: date.wrappedValue)
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack {
+                DatePicker("", selection: $tempDate, displayedComponents: .date)
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                    .environment(\.locale, Locale(identifier: "zh_CN"))
+                    .padding()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.themeBg)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("取消") { isPresented = false }
+                        .foregroundColor(.themeText2)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("完成") {
+                        date = tempDate
+                        isPresented = false
+                    }
+                    .foregroundColor(.themeAccent)
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - 轮盘式年月选择器（用于筛选）
+struct WheelYearMonthPicker: View {
+    @Binding var year: Int?
+    @Binding var month: Int?
+    @State private var showPicker = false
+    @State private var tempYear: Int = Calendar.current.component(.year, from: Date())
+    @State private var tempMonth: Int = Calendar.current.component(.month, from: Date())
+
+    private let years = Array(2024...2035)
+    private let months = Array(1...12)
+
+    private var displayText: String {
+        if year == nil && month == nil { return "全部时间" }
+        if let y = year, let m = month { return "\(y)年\(m)月" }
+        if let y = year { return "\(y)年" }
+        if let m = month { return "\(m)月" }
+        return "全部时间"
+    }
+
+    var body: some View {
+        Button {
+            tempYear = year ?? Calendar.current.component(.year, from: Date())
+            tempMonth = month ?? Calendar.current.component(.month, from: Date())
+            showPicker = true
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "calendar")
+                    .font(.system(size: 12))
+                Text(displayText)
+                    .font(.system(size: 13, weight: .medium))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10))
+            }
+            .foregroundColor(.themeAccent)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(Color.themeAccentWeak)
+            .cornerRadius(8)
+        }
+        .sheet(isPresented: $showPicker) {
+            NavigationStack {
+                VStack(spacing: 0) {
+                    HStack(spacing: 0) {
+                        Picker("年份", selection: $tempYear) {
+                            Text("全部年").tag(0)
+                            ForEach(years, id: \.self) { y in
+                                Text("\(y)年").tag(y)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+
+                        Picker("月份", selection: $tempMonth) {
+                            Text("全部月").tag(0)
+                            ForEach(months, id: \.self) { m in
+                                Text("\(m)月").tag(m)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .padding(.horizontal)
+
+                    Spacer()
+                }
+                .background(Color.themeBg)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("取消") { showPicker = false }
+                            .foregroundColor(.themeText2)
+                    }
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("确定") {
+                            year = tempYear == 0 ? nil : tempYear
+                            month = tempMonth == 0 ? nil : tempMonth
+                            showPicker = false
+                        }
+                        .foregroundColor(.themeAccent)
+                        .fontWeight(.semibold)
+                    }
+                }
+            }
+            .presentationDetents([.height(360)])
+        }
+    }
+}
