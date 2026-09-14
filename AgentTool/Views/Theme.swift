@@ -18,6 +18,24 @@ extension Color {
     static let themeRed = Color(hex: "DF5555")
 }
 
+// 让 Color? 也能使用 .themeXxx 静态成员（foregroundColor 等接受 Color? 的 API）
+extension Optional where Wrapped == Color {
+    static var themeSidebar: Color? { Color.themeSidebar }
+    static var themeSidebarDark: Color? { Color.themeSidebarDark }
+    static var themeAccent: Color? { Color.themeAccent }
+    static var themeAccentDark: Color? { Color.themeAccentDark }
+    static var themeAccentWeak: Color? { Color.themeAccentWeak }
+    static var themeBg: Color? { Color.themeBg }
+    static var themePanel: Color? { Color.themePanel }
+    static var themeText: Color? { Color.themeText }
+    static var themeText2: Color? { Color.themeText2 }
+    static var themeText3: Color? { Color.themeText3 }
+    static var themeBorder: Color? { Color.themeBorder }
+    static var themeBlue: Color? { Color.themeBlue }
+    static var themeAmber: Color? { Color.themeAmber }
+    static var themeRed: Color? { Color.themeRed }
+}
+
 extension Color {
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
