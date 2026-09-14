@@ -14,7 +14,7 @@ final class DealRecord {
     var rent: Double
     var deposit: Double
     var prepayment: Double
-    var rentDueDay: Int // 1-31
+    var rentDueDay: Int? // 1-31, nil表示未设置
     var agentFeeLandlord: Double
     var agentFeeTenant: Double
     var totalFee: Double
@@ -25,7 +25,7 @@ final class DealRecord {
     init(date: Date = Date(), roomNumber: String = "", landlord: String = "",
          unitType: String = "", leaseStart: Date = Date(), leaseEnd: Date = Date(),
          leaseDuration: String = "", rent: Double = 0, deposit: Double = 0,
-         prepayment: Double = 0, rentDueDay: Int = 1, agentFeeLandlord: Double = 0,
+         prepayment: Double = 0, rentDueDay: Int? = nil, agentFeeLandlord: Double = 0,
          agentFeeTenant: Double = 0, totalFee: Double = 0, manager: String = "",
          source: String = "", notes: String = "") {
         self.id = UUID()

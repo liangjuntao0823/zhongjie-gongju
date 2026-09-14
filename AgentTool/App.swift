@@ -86,7 +86,7 @@ struct MainTabView: View {
                 .tag(2)
 
             PayoutView()
-                .tabItem { Label("打租", systemImage: "arrow.up.circle.fill") }
+                .tabItem { Label("包租", systemImage: "arrow.up.circle.fill") }
                 .tag(3)
 
             ProfitView()

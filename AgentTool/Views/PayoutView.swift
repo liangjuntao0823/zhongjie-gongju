@@ -31,13 +31,16 @@ struct PayoutView: View {
                     ContentUnavailableView("暂无打租记录", systemImage: "arrow.up.circle", description: Text("点击右上角 + 添加包租打租记录"))
                 }
             }
-            .navigationTitle("包租打租")
+            .navigationTitle("包租管理")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Menu {
-                        Button { exportToPDF() } label: {
-                            Label("导出PDF", systemImage: "square.and.arrow.up")
+                        Button { exportToImage() } label: {
+                            Label("导出图片", systemImage: "photo")
+                        }
+                        Button { exportToExcel() } label: {
+                            Label("导出Excel", systemImage: "tablecells")
                         }
                         Button { exportTemplate() } label: {
                             Label("导出Excel模板", systemImage: "doc.text")
@@ -68,43 +71,39 @@ struct PayoutView: View {
         for index in offsets { modelContext.delete(payouts[index]) }
     }
 
-    private func exportToPDF() {
-        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("打租记录-\(Int(Date().timeIntervalSince1970)).pdf")
-        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 595, height: 842))
-        do {
-            try renderer.writePDF(to: fileURL) { context in
-                let cg = context.cgContext
-                cg.setFillColor(UIColor.black.cgColor)
-                ("包租打租记录" as NSString).draw(at: CGPoint(x: 40, y: 40), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 18)])
-                ("导出时间: \(DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short))" as NSString).draw(at: CGPoint(x: 40, y: 65), withAttributes: [.font: UIFont.systemFont(ofSize: 10), .foregroundColor: UIColor.gray])
-                cg.setFillColor(UIColor(red: 0.08, green: 0.23, blue: 0.20, alpha: 1.0).cgColor)
-                cg.fill(CGRect(x: 40, y: 90, width: 515, height: 25))
-                let headers = ["房号", "管理人", "户型", "年租金", "月打租", "免租期", "支付方式"]
-                let widths: [CGFloat] = [80, 70, 80, 80, 80, 60, 65]
-                var x: CGFloat = 45
-                for (i, h) in headers.enumerated() {
-                    (h as NSString).draw(at: CGPoint(x: x, y: 96), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 10), .foregroundColor: UIColor.white])
-                    x += widths[i]
-                }
-                var y: CGFloat = 120
-                for p in payouts {
-                    if y > 800 { context.beginPage(); y = 40 }
-                    let monthlyPayout = p.annualRent / 12
-                    let vals = [p.roomNumber, p.manager, p.unitType, "¥\(Int(p.annualRent))",
-                                "¥\(Int(monthlyPayout))", "\(p.rentFreeDays)天", p.paymentMethod]
-                    x = 45
-                    for (i, v) in vals.enumerated() {
-                        (v as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: [.font: UIFont.systemFont(ofSize: 9)])
-                        x += widths[i]
-                    }
-                    y += 18
-                }
-                ("共 \(payouts.count) 条记录" as NSString).draw(at: CGPoint(x: 40, y: 810), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 11)])
-            }
-            exportURL = ExportURL(url: fileURL)
-        } catch {
-            print("PDF导出失败: \(error)")
+    private func exportToImage() {
+        let dateStr = DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short)
+        let rows = payouts.map { p -> [String] in
+            let monthlyPayout = p.annualRent / 12
+            return [p.roomNumber, p.manager, p.unitType, "¥\(Int(p.annualRent))",
+                    "¥\(Int(monthlyPayout))", "\(p.rentFreeDays)天", p.paymentMethod]
         }
+        let view = ExportTableView(
+            title: "包租记录", dateStr: dateStr,
+            headers: ["房号","管理人","户型","年租金","月打租","免租期","支付方式"],
+            rows: rows
+        )
+        let renderer = ImageRenderer(content: view.frame(width: 700))
+        renderer.scale = 2.0
+        if let image = renderer.uiImage {
+            let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("包租记录-\(Int(Date().timeIntervalSince1970)).png")
+            if let data = image.pngData() {
+                try? data.write(to: fileURL)
+                exportURL = ExportURL(url: fileURL)
+            }
+        }
+    }
+
+    private func exportToExcel() {
+        var csv = "\u{FEFF}房号,管理人,户型,起租日,到期日,年租金,免租期,支付方式,备注\n"
+        let df = DateFormatter()
+        df.dateFormat = "yyyy-MM-dd"
+        for p in payouts {
+            csv += "\(p.roomNumber),\(p.manager),\(p.unitType),\(df.string(from: p.leaseStartDate)),\(df.string(from: p.leaseEndDate)),\(Int(p.annualRent)),\(p.rentFreeDays),\(p.paymentMethod),\(p.notes)\n"
+        }
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("包租记录-\(Int(Date().timeIntervalSince1970)).csv")
+        try? csv.write(to: fileURL, atomically: true, encoding: .utf8)
+        exportURL = ExportURL(url: fileURL)
     }
 
     private func exportTemplate() {
@@ -337,7 +336,7 @@ struct AddPayoutView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Color.themeBg)
-            .navigationTitle("新增打租记录")
+            .navigationTitle("新增包租")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }

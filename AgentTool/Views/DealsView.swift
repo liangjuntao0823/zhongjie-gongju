@@ -130,9 +130,14 @@ struct DealsView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Menu {
                         Button {
-                            exportToPDF()
+                            exportToImage()
                         } label: {
-                            Label("导出PDF", systemImage: "square.and.arrow.up")
+                            Label("导出图片", systemImage: "photo")
+                        }
+                        Button {
+                            exportToExcel()
+                        } label: {
+                            Label("导出Excel", systemImage: "tablecells")
                         }
                         Button {
                             exportTemplate()
@@ -173,7 +178,7 @@ struct DealsView: View {
             .sheet(item: $editingExpense) { exp in
                 EditMiscView(item: .expense(exp))
             }
-            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.commaSeparatedText]) { result in
+            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.data, .commaSeparatedText, .text]) { result in
                 if case .success(let url) = result {
                     importFromCSV(url: url)
                 }
@@ -184,104 +189,68 @@ struct DealsView: View {
         }
     }
 
-    // MARK: - 导出PDF
-    private func exportToPDF() {
+    // MARK: - 导出图片
+    private func exportToImage() {
         let title = selectedTab == 0 ? "成交记录" : (selectedTab == 1 ? "杂项收入" : "杂项支出")
-        let records = selectedTab == 0 ? filteredDeals.count : (selectedTab == 1 ? filteredIncomes.count : filteredExpenses.count)
+        let dateStr = DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short)
 
-        let tempDir = FileManager.default.temporaryDirectory
-        let fileURL = tempDir.appendingPathComponent("\(title)-\(Int(Date().timeIntervalSince1970)).pdf")
+        let view = ExportTableView(
+            title: title,
+            dateStr: dateStr,
+            headers: selectedTab == 0 ? ["日期","房号","房东","户型","租金","中介费","备注"] : ["日期","项目","金额","备注"],
+            rows: selectedTab == 0 ? filteredDeals.map { [
+                DateFormatter.localizedString(from: $0.date, dateStyle: .short, timeStyle: .none),
+                $0.roomNumber, $0.landlord, $0.unitType,
+                "¥\(Int($0.rent))", "¥\(Int($0.totalFee))", $0.notes
+            ]} : (selectedTab == 1 ? filteredIncomes.map { [
+                DateFormatter.localizedString(from: $0.date, dateStyle: .short, timeStyle: .none),
+                $0.item, "¥\(Int($0.amount))", $0.notes
+            ]} : filteredExpenses.map { [
+                DateFormatter.localizedString(from: $0.date, dateStyle: .short, timeStyle: .none),
+                $0.item, "¥\(Int($0.amount))", $0.notes
+            ]})
+        )
 
-        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 595, height: 842))
-        do {
-            try renderer.writePDF(to: fileURL) { context in
-                let cgContext = context.cgContext
-                cgContext.setFillColor(UIColor.black.cgColor)
-
-                // 标题
-                let titleFont = UIFont.boldSystemFont(ofSize: 18)
-                let titleAttrs: [NSAttributedString.Key: Any] = [.font: titleFont]
-                (title as NSString).draw(at: CGPoint(x: 40, y: 40), withAttributes: titleAttrs)
-
-                // 日期
-                let dateFont = UIFont.systemFont(ofSize: 10)
-                let dateAttrs: [NSAttributedString.Key: Any] = [.font: dateFont, .foregroundColor: UIColor.gray]
-                let dateStr = "导出时间: \(DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short))"
-                (dateStr as NSString).draw(at: CGPoint(x: 40, y: 65), withAttributes: dateAttrs)
-
-                // 表头
-                let headerFont = UIFont.boldSystemFont(ofSize: 10)
-                let headerAttrs: [NSAttributedString.Key: Any] = [.font: headerFont, .foregroundColor: UIColor.white]
-                cgContext.setFillColor(UIColor(red: 0.08, green: 0.23, blue: 0.20, alpha: 1.0).cgColor)
-                cgContext.fill(CGRect(x: 40, y: 90, width: 515, height: 25))
-
-                let colFont = UIFont.systemFont(ofSize: 9)
-                let colAttrs: [NSAttributedString.Key: Any] = [.font: colFont]
-
-                if selectedTab == 0 {
-                    let headers = ["日期", "房号", "房东", "户型", "租金", "中介费", "备注"]
-                    let widths: [CGFloat] = [70, 70, 60, 70, 60, 70, 115]
-                    var x: CGFloat = 45
-                    for (i, h) in headers.enumerated() {
-                        (h as NSString).draw(at: CGPoint(x: x, y: 96), withAttributes: headerAttrs)
-                        x += widths[i]
-                    }
-                    var y: CGFloat = 120
-                    for deal in filteredDeals {
-                        if y > 800 {
-                            context.beginPage()
-                            y = 40
-                        }
-                        let vals = [
-                            DateFormatter.localizedString(from: deal.date, dateStyle: .short, timeStyle: .none),
-                            deal.roomNumber, deal.landlord, deal.unitType,
-                            "¥\(Int(deal.rent))", "¥\(Int(deal.totalFee))", deal.notes
-                        ]
-                        x = 45
-                        for (i, v) in vals.enumerated() {
-                            (v as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: colAttrs)
-                            x += widths[i]
-                        }
-                        y += 18
-                    }
-                } else {
-                    let headers = ["日期", "项目", "金额", "备注"]
-                    let widths: [CGFloat] = [100, 150, 100, 165]
-                    var x: CGFloat = 45
-                    for (i, h) in headers.enumerated() {
-                        (h as NSString).draw(at: CGPoint(x: x, y: 96), withAttributes: headerAttrs)
-                        x += widths[i]
-                    }
-                    var y: CGFloat = 120
-                    let items = selectedTab == 1 ? filteredIncomes.map { ($0.date, $0.item, $0.amount, $0.notes) } : filteredExpenses.map { ($0.date, $0.item, $0.amount, $0.notes) }
-                    for item in items {
-                        if y > 800 {
-                            context.beginPage()
-                            y = 40
-                        }
-                        let vals = [
-                            DateFormatter.localizedString(from: item.0, dateStyle: .short, timeStyle: .none),
-                            item.1, "¥\(Int(item.2))", item.3
-                        ]
-                        x = 45
-                        for (i, v) in vals.enumerated() {
-                            (v as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: colAttrs)
-                            x += widths[i]
-                        }
-                        y += 18
-                    }
-                }
-
-                // 底部统计
-                let totalFont = UIFont.boldSystemFont(ofSize: 11)
-                let totalAttrs: [NSAttributedString.Key: Any] = [.font: totalFont]
-                let totalStr = "共 \(records) 条记录"
-                (totalStr as NSString).draw(at: CGPoint(x: 40, y: 810), withAttributes: totalAttrs)
+        let renderer = ImageRenderer(content: view.frame(width: 700))
+        renderer.scale = 2.0
+        if let image = renderer.uiImage {
+            let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(title)-\(Int(Date().timeIntervalSince1970)).png")
+            if let data = image.pngData() {
+                try? data.write(to: fileURL)
+                exportURL = ExportURL(url: fileURL)
             }
-            exportURL = ExportURL(url: fileURL)
-        } catch {
-            print("PDF导出失败: \(error)")
         }
+    }
+
+    // MARK: - 导出Excel(CSV)
+    private func exportToExcel() {
+        let title = selectedTab == 0 ? "成交记录" : (selectedTab == 1 ? "杂项收入" : "杂项支出")
+        var csv = "\u{FEFF}"
+        if selectedTab == 0 {
+            csv += "成交日期,房号,房东,户型,起租期,到期日,租期,月租金,押金,预存,交租日,房东中介费,租客中介费,管理人,客源,备注\n"
+            for deal in filteredDeals {
+                let df = DateFormatter()
+                df.dateFormat = "yyyy-MM-dd"
+                csv += "\(df.string(from: deal.date)),\(deal.roomNumber),\(deal.landlord),\(deal.unitType),\(df.string(from: deal.leaseStart)),\(df.string(from: deal.leaseEnd)),\(deal.leaseDuration),\(Int(deal.rent)),\(Int(deal.deposit)),\(Int(deal.prepayment)),\(deal.rentDueDay ?? 0),\(Int(deal.agentFeeLandlord)),\(Int(deal.agentFeeTenant)),\(deal.manager),\(deal.source),\(deal.notes)\n"
+            }
+        } else if selectedTab == 1 {
+            csv += "日期,项目,金额,备注\n"
+            let df = DateFormatter()
+            df.dateFormat = "yyyy-MM-dd"
+            for inc in filteredIncomes {
+                csv += "\(df.string(from: inc.date)),\(inc.item),\(Int(inc.amount)),\(inc.notes)\n"
+            }
+        } else {
+            csv += "日期,项目,金额,备注\n"
+            let df = DateFormatter()
+            df.dateFormat = "yyyy-MM-dd"
+            for exp in filteredExpenses {
+                csv += "\(df.string(from: exp.date)),\(exp.item),\(Int(exp.amount)),\(exp.notes)\n"
+            }
+        }
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(title)-\(Int(Date().timeIntervalSince1970)).csv")
+        try? csv.write(to: fileURL, atomically: true, encoding: .utf8)
+        exportURL = ExportURL(url: fileURL)
     }
 
     // MARK: - 导出Excel模板(CSV)
@@ -304,16 +273,36 @@ struct DealsView: View {
 
     // MARK: - 导入CSV
     private func importFromCSV(url: URL) {
-        guard url.startAccessingSecurityScopedResource() else { return }
-        defer { url.stopAccessingSecurityScopedResource() }
-        guard let content = try? String(contentsOf: url, encoding: .utf8) else { return }
-        let lines = content.components(separatedBy: .newlines).dropFirst()
+        let didAccess = url.startAccessingSecurityScopedResource()
+        defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
+
+        // 尝试读取文件内容，支持UTF-8和GBK
+        var content: String?
+        if let data = try? Data(contentsOf: url) {
+            // 去掉BOM
+            var data = data
+            if data.count >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
+                data = data.subdata(in: 3..<data.count)
+            }
+            content = String(data: data, encoding: .utf8)
+            if content == nil {
+                // 尝试GBK编码
+                let gbk = CFStringEncodings.GB_18030_2000.rawValue
+                let encoding = CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(gbk))
+                content = String(data: data, encoding: String.Encoding(rawValue: encoding))
+            }
+        }
+        guard let csv = content else { return }
+
+        let lines = csv.components(separatedBy: .newlines).dropFirst()
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
 
         var count = 0
         for line in lines {
-            let cols = line.components(separatedBy: ",")
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            let cols = trimmed.components(separatedBy: ",")
             guard cols.count >= 3 else { continue }
             if selectedTab == 0 && cols.count >= 16 {
                 let date = dateFormatter.date(from: cols[0]) ?? Date()
@@ -323,7 +312,7 @@ struct DealsView: View {
                     leaseEnd: dateFormatter.date(from: cols[5]) ?? date,
                     leaseDuration: cols[6], rent: Double(cols[7]) ?? 0,
                     deposit: Double(cols[8]) ?? 0, prepayment: Double(cols[9]) ?? 0,
-                    rentDueDay: Int(cols[10]) ?? 1,
+                    rentDueDay: Int(cols[10]),
                     agentFeeLandlord: Double(cols[11]) ?? 0,
                     agentFeeTenant: Double(cols[12]) ?? 0,
                     totalFee: (Double(cols[11]) ?? 0) + (Double(cols[12]) ?? 0),
@@ -471,8 +460,10 @@ struct DealRow: View {
                         .font(.system(size: 11)).foregroundColor(.themeText2)
                     Text("¥\(Int(deal.rent))/月")
                         .font(.system(size: 11)).foregroundColor(.themeText2)
-                    Text("每月\(deal.rentDueDay)号交租")
-                        .font(.system(size: 11)).foregroundColor(.themeText2)
+                    if let day = deal.rentDueDay {
+                        Text("每月\(day)号交租")
+                            .font(.system(size: 11)).foregroundColor(.themeText2)
+                    }
                 }
                 if !deal.notes.isEmpty {
                     Text(deal.notes)
@@ -575,7 +566,7 @@ struct AddDealView: View {
     @State private var rentText = ""
     @State private var depositText = ""
     @State private var prepaymentText = ""
-    @State private var rentDueDay = 1
+    @State private var rentDueDay: Int? = nil
     @State private var agentFeeLandlordText = ""
     @State private var agentFeeTenantText = ""
     @State private var manager = ""
@@ -603,8 +594,9 @@ struct AddDealView: View {
                     WheelDateField(label: "到期日", date: $leaseEnd)
                     TextField("租期（自由输入）", text: $leaseDuration)
                     Picker("交租日期", selection: $rentDueDay) {
+                        Text("未设置").tag(nil as Int?)
                         ForEach(1...31, id: \.self) { day in
-                            Text("每月\(day)号").tag(day)
+                            Text("每月\(day)号").tag(day as Int?)
                         }
                     }
                 }
@@ -668,7 +660,7 @@ struct EditDealView: View {
     @State private var rentText: String
     @State private var depositText: String
     @State private var prepaymentText: String
-    @State private var rentDueDay: Int
+    @State private var rentDueDay: Int?
     @State private var agentFeeLandlordText: String
     @State private var agentFeeTenantText: String
     @State private var manager: String
@@ -716,8 +708,9 @@ struct EditDealView: View {
                     WheelDateField(label: "到期日", date: $leaseEnd)
                     TextField("租期（自由输入）", text: $leaseDuration)
                     Picker("交租日期", selection: $rentDueDay) {
+                        Text("未设置").tag(nil as Int?)
                         ForEach(1...31, id: \.self) { day in
-                            Text("每月\(day)号").tag(day)
+                            Text("每月\(day)号").tag(day as Int?)
                         }
                     }
                 }
@@ -887,6 +880,63 @@ struct EditMiscView: View {
 }
 
 // MARK: - 导出URL包装
+// MARK: - 导出用表格视图
+struct ExportTableView: View {
+    let title: String
+    let dateStr: String
+    let headers: [String]
+    let rows: [[String]]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.black)
+                .padding(.bottom, 4)
+            Text("导出时间: \(dateStr)")
+                .font(.system(size: 11))
+                .foregroundColor(.gray)
+                .padding(.bottom, 12)
+
+            // 表头
+            HStack(spacing: 0) {
+                ForEach(headers.indices, id: \.self) { i in
+                    Text(headers[i])
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 8)
+                }
+            }
+            .background(Color(hex: "143B34"))
+
+            // 数据行
+            ForEach(rows.indices, id: \.self) { rowIdx in
+                HStack(spacing: 0) {
+                    ForEach(rows[rowIdx].indices, id: \.self) { colIdx in
+                        Text(rows[rowIdx][colIdx])
+                            .font(.system(size: 10))
+                            .foregroundColor(.black)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 6)
+                            .lineLimit(1)
+                    }
+                }
+                .background(rowIdx % 2 == 0 ? Color.white : Color(hex: "F5F7F5"))
+            }
+
+            Text("共 \(rows.count) 条记录")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.black)
+                .padding(.top, 10)
+        }
+        .padding(20)
+        .background(Color.white)
+    }
+}
+
 struct ExportURL: Identifiable {
     let id = UUID()
     let url: URL

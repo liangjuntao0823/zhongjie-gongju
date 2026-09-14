@@ -107,98 +107,112 @@ struct DashboardView: View {
         return prop.quarterlyUtilityRecords.contains { $0.quarter == quarterIndex && $0.isSettled }
     }
 
+    // 计算距离到期的天数
+    private func daysUntilExpiry(_ prop: Property) -> Int {
+        let calendar = Calendar.current
+        let now = Date()
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy.M.d"
+        if let endDate = dateFormatter.date(from: prop.leaseEnd) {
+            return max(0, calendar.dateComponents([.day], from: now, to: endDate).day ?? 0)
+        }
+        return 0
+    }
+
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                // 顶部标题
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("工作台")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(.themeText)
-                        Text("经营概览")
-                            .font(.system(size: 12.5))
-                            .foregroundColor(.themeText2)
-                    }
-                    Spacer()
-                    Button {
-                        tabRouter.selectedTab = 2
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(Color.themeRed.opacity(0.1))
-                                .frame(width: 38, height: 38)
-                            Image(systemName: "bell.fill")
-                                .foregroundColor(.themeRed)
-                                .font(.system(size: 16))
-                            if !upcomingRentReminders.isEmpty {
-                                Text("\(upcomingRentReminders.count)")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .frame(width: 16, height: 16)
-                                    .background(Circle().fill(Color.themeRed))
-                                    .offset(x: 10, y: -10)
-                            }
+        VStack(spacing: 12) {
+            // 顶部标题（固定）
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("工作台")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(.themeText)
+                    Text("经营概览")
+                        .font(.system(size: 12.5))
+                        .foregroundColor(.themeText2)
+                }
+                Spacer()
+                Button {
+                    tabRouter.selectedTab = 2
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(Color.themeRed.opacity(0.1))
+                            .frame(width: 38, height: 38)
+                        Image(systemName: "bell.fill")
+                            .foregroundColor(.themeRed)
+                            .font(.system(size: 16))
+                        if !upcomingRentReminders.isEmpty {
+                            Text("\(upcomingRentReminders.count)")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(width: 16, height: 16)
+                                .background(Circle().fill(Color.themeRed))
+                                .offset(x: 10, y: -10)
                         }
                     }
                 }
-                .padding(.horizontal)
-                .padding(.top, 8)
+            }
+            .padding(.horizontal)
+            .padding(.top, 8)
 
-                // 时间卡片
-                VStack(spacing: 6) {
-                    Text(timeString)
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.white)
-                        .fontDesign(.rounded)
-                    Text(dateString)
-                        .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.9))
-                    Text("本月还剩\(daysRemainingInMonth)天，加油！")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.white.opacity(0.9))
-                        .padding(.top, 2)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 18)
-                .background(
-                    LinearGradient(gradient: Gradient(colors: [Color.themeAccent, Color.themeAccentDark]),
-                                   startPoint: .topLeading, endPoint: .bottomTrailing)
-                )
-                .cornerRadius(14)
-                .padding(.horizontal)
+            // 时间卡片（固定）
+            VStack(spacing: 6) {
+                Text(timeString)
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(.white)
+                    .fontDesign(.rounded)
+                Text(dateString)
+                    .font(.system(size: 13))
+                    .foregroundColor(.white.opacity(0.9))
+                Text("本月还剩\(daysRemainingInMonth)天，加油！")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.white.opacity(0.9))
+                    .padding(.top, 2)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(
+                LinearGradient(gradient: Gradient(colors: [Color.themeAccent, Color.themeAccentDark]),
+                               startPoint: .topLeading, endPoint: .bottomTrailing)
+            )
+            .cornerRadius(14)
+            .padding(.horizontal)
 
-                // 快捷操作
-                VStack(alignment: .leading, spacing: 12) {
-                    SectionTitle(title: "快捷操作")
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
-                        QuickActionItem(icon: "plus.circle.fill", label: "新增成交", color: .themeAccent) {
-                            showAddDeal = true
-                        }
-                        QuickActionItem(icon: "creditcard.fill", label: "登记收租", color: .themeBlue) {
-                            showAddRent = true
-                        }
-                        QuickActionItem(icon: "arrow.up.circle.fill", label: "包租打租", color: Color(hex: "6B3FA0")) {
-                            showAddPayout = true
-                        }
-                        QuickActionItem(icon: "dollarsign.circle.fill", label: "新增收入", color: Color(hex: "2E8B57")) {
-                            showAddIncome = true
-                        }
-                        QuickActionItem(icon: "dollarsign.circle.fill", label: "新增支出", color: Color(hex: "CD5C5C")) {
-                            showAddExpense = true
-                        }
-                        QuickActionItem(icon: "bolt.fill", label: "水电结算", color: .themeAmber) {
-                            showUtility = true
-                        }
+            // 快捷操作（固定）
+            VStack(alignment: .leading, spacing: 10) {
+                SectionTitle(title: "快捷操作")
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    QuickActionItem(icon: "plus.circle.fill", label: "新增成交", color: .themeAccent) {
+                        showAddDeal = true
+                    }
+                    QuickActionItem(icon: "creditcard.fill", label: "登记收租", color: .themeBlue) {
+                        showAddRent = true
+                    }
+                    QuickActionItem(icon: "arrow.up.circle.fill", label: "新增包租", color: Color(hex: "6B3FA0")) {
+                        showAddPayout = true
+                    }
+                    QuickActionItem(icon: "dollarsign.circle.fill", label: "新增收入", color: Color(hex: "2E8B57")) {
+                        showAddIncome = true
+                    }
+                    QuickActionItem(icon: "dollarsign.circle.fill", label: "新增支出", color: Color(hex: "CD5C5C")) {
+                        showAddExpense = true
+                    }
+                    QuickActionItem(icon: "bolt.fill", label: "水电结算", color: .themeAmber) {
+                        showUtility = true
                     }
                 }
-                .padding(16)
-                .background(Color.themePanel)
-                .cornerRadius(14)
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.themeBorder, lineWidth: 1))
-                .padding(.horizontal)
+            }
+            .padding(14)
+            .background(Color.themePanel)
+            .cornerRadius(14)
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.themeBorder, lineWidth: 1))
+            .padding(.horizontal)
 
-                // KPI 看板
+            // 以下内容可滑动
+            ScrollView {
+                VStack(spacing: 16) {
+                    // KPI 看板
                 VStack(spacing: 0) {
                     // 第一行：在管房间、即将到期
                     HStack(spacing: 10) {
@@ -219,20 +233,6 @@ struct DashboardView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
-
-                    // 分界虚线
-                    HStack {
-                        Rectangle()
-                            .fill(Color.themeBorder)
-                            .frame(height: 1)
-                            .overlay(
-                                Rectangle()
-                                    .stroke(style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                                    .foregroundColor(Color.themeBorder)
-                            )
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
 
                     // 第二行：本月中介费、杂项收入、杂项支出、本月收入
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
@@ -272,6 +272,62 @@ struct DashboardView: View {
                 .cornerRadius(14)
                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.themeBorder, lineWidth: 1))
                 .padding(.horizontal)
+
+                // 租期提醒
+                if let expiring = stats?.expiringSoon, !expiring.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(Color.themeAccent)
+                                .frame(width: 8, height: 8)
+                            Text("租期提醒")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.themeText)
+                            Text("30天内到期")
+                                .font(.system(size: 12))
+                                .foregroundColor(.themeText3)
+                            Spacer()
+                        }
+                        ForEach(expiring, id: \.id) { prop in
+                            let days = daysUntilExpiry(prop)
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color(hex: "E8EEF8"))
+                                        .frame(width: 44, height: 44)
+                                    Text(String(prop.roomNumber.prefix(2)))
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(Color(hex: "4A6FA5"))
+                                }
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(prop.roomNumber)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.themeText)
+                                    Text("\(prop.leaseEnd) 到期 · 还剩\(days)天")
+                                        .font(.system(size: 11.5))
+                                        .foregroundColor(.themeText3)
+                                }
+                                Spacer()
+                                Text("还剩\(days)天")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(days <= 7 ? .themeRed : .themeAmber)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(days <= 7 ? Color(hex: "FDF0F0") : Color(hex: "FBF1DE"))
+                                    .cornerRadius(8)
+                            }
+                            .padding(.vertical, 4)
+                            if prop.id != expiring.last?.id {
+                                Divider().background(Color.themeBorder)
+                            }
+                        }
+                    }
+                    .padding(16)
+                    .background(Color.themePanel)
+                    .cornerRadius(14)
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.themeBorder, lineWidth: 1))
+                    .padding(.horizontal)
+                }
 
                 // 收租进度
                 VStack(alignment: .leading, spacing: 10) {
@@ -395,8 +451,11 @@ struct DashboardView: View {
                     .padding(.horizontal)
                 }
 
-                Spacer().frame(height: 16)
+                    Spacer().frame(height: 16)
+                }
+                .padding(.top, 4)
             }
+            .background(Color.themeBg)
         }
         .background(Color.themeBg)
         .onAppear {

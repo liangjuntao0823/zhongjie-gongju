@@ -99,9 +99,14 @@ struct RentCollectionView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Menu {
                         Button {
-                            exportToPDF()
+                            exportToImage()
                         } label: {
-                            Label("导出PDF", systemImage: "square.and.arrow.up")
+                            Label("导出图片", systemImage: "photo")
+                        }
+                        Button {
+                            exportToExcel()
+                        } label: {
+                            Label("导出Excel", systemImage: "tablecells")
                         }
                         Button {
                             exportTemplate()
@@ -147,57 +152,41 @@ struct RentCollectionView: View {
         for index in offsets { modelContext.delete(filteredProperties[index]) }
     }
 
-    // MARK: - 导出PDF
-    private func exportToPDF() {
-        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("收租记录-\(Int(Date().timeIntervalSince1970)).pdf")
-        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 595, height: 842))
-        do {
-            try renderer.writePDF(to: fileURL) { context in
-                let cgContext = context.cgContext
-                cgContext.setFillColor(UIColor.black.cgColor)
-
-                let titleAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 18)]
-                ("收租记录" as NSString).draw(at: CGPoint(x: 40, y: 40), withAttributes: titleAttrs)
-
-                let dateAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 10), .foregroundColor: UIColor.gray]
-                ("导出时间: \(DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short))" as NSString).draw(at: CGPoint(x: 40, y: 65), withAttributes: dateAttrs)
-
-                cgContext.setFillColor(UIColor(red: 0.08, green: 0.23, blue: 0.20, alpha: 1.0).cgColor)
-                cgContext.fill(CGRect(x: 40, y: 90, width: 515, height: 25))
-
-                let headerAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 10), .foregroundColor: UIColor.white]
-                let colAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 9)]
-                let headers = ["房号", "房东", "户型", "月租", "交租日", "类型", "本月状态"]
-                let widths: [CGFloat] = [80, 70, 80, 70, 60, 70, 85]
-                var x: CGFloat = 45
-                for (i, h) in headers.enumerated() {
-                    (h as NSString).draw(at: CGPoint(x: x, y: 96), withAttributes: headerAttrs)
-                    x += widths[i]
-                }
-
-                let currentMonth = Calendar.current.component(.month, from: Date())
-                var y: CGFloat = 120
-                for prop in filteredProperties {
-                    if y > 800 { context.beginPage(); y = 40 }
-                    let paid = prop.monthlyRentRecords.contains { $0.month == currentMonth && $0.isPaid }
-                    let vals = [prop.roomNumber, prop.landlord, prop.unitType,
-                                "¥\(Int(prop.rent))", "\(prop.rentDueDay)号",
-                                prop.propertyType, paid ? "已收" : "未收"]
-                    x = 45
-                    for (i, v) in vals.enumerated() {
-                        (v as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: colAttrs)
-                        x += widths[i]
-                    }
-                    y += 18
-                }
-
-                let totalAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 11)]
-                ("共 \(filteredProperties.count) 套房源" as NSString).draw(at: CGPoint(x: 40, y: 810), withAttributes: totalAttrs)
-            }
-            exportURL = ExportURL(url: fileURL)
-        } catch {
-            print("PDF导出失败: \(error)")
+    // MARK: - 导出图片
+    private func exportToImage() {
+        let dateStr = DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short)
+        let currentMonth = Calendar.current.component(.month, from: Date())
+        let rows = filteredProperties.map { prop -> [String] in
+            let paid = prop.monthlyRentRecords.contains { $0.month == currentMonth && $0.isPaid }
+            return [prop.roomNumber, prop.landlord, prop.unitType,
+                    "¥\(Int(prop.rent))", "\(prop.rentDueDay)号",
+                    prop.propertyType, paid ? "已收" : "未收"]
         }
+        let view = ExportTableView(
+            title: "收租记录", dateStr: dateStr,
+            headers: ["房号","房东","户型","月租","交租日","类型","本月状态"],
+            rows: rows
+        )
+        let renderer = ImageRenderer(content: view.frame(width: 700))
+        renderer.scale = 2.0
+        if let image = renderer.uiImage {
+            let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("收租记录-\(Int(Date().timeIntervalSince1970)).png")
+            if let data = image.pngData() {
+                try? data.write(to: fileURL)
+                exportURL = ExportURL(url: fileURL)
+            }
+        }
+    }
+
+    // MARK: - 导出Excel(CSV)
+    private func exportToExcel() {
+        var csv = "\u{FEFF}房号,房东,户型,月租金,交租日,房源类型,备注\n"
+        for prop in filteredProperties {
+            csv += "\(prop.roomNumber),\(prop.landlord),\(prop.unitType),\(Int(prop.rent)),\(prop.rentDueDay),\(prop.propertyType),\(prop.notes)\n"
+        }
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("收租记录-\(Int(Date().timeIntervalSince1970)).csv")
+        try? csv.write(to: fileURL, atomically: true, encoding: .utf8)
+        exportURL = ExportURL(url: fileURL)
     }
 
     private func exportTemplate() {
@@ -531,7 +520,7 @@ struct AddPropertyView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Color.themeBg)
-            .navigationTitle("新增房源")
+            .navigationTitle("新增收租")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
