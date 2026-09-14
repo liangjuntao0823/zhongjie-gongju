@@ -78,7 +78,7 @@ struct PayoutView: View {
             ("导出时间: \(DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short))" as NSString).draw(at: CGPoint(x: 40, y: 65), withAttributes: [.font: UIFont.systemFont(ofSize: 10), .foregroundColor: UIColor.gray])
             cg.setFillColor(UIColor(red: 0.08, green: 0.23, blue: 0.20, alpha: 1.0).cgColor)
             cg.fill(CGRect(x: 40, y: 90, width: 515, height: 25))
-            let headers = ["房号", "房东", "户型", "年租金", "月打租", "免租期", "管理人"]
+            let headers = ["房号", "管理人", "户型", "年租金", "月打租", "免租期", "支付方式"]
             let widths: [CGFloat] = [80, 70, 80, 80, 80, 60, 65]
             var x: CGFloat = 45
             for (i, h) in headers.enumerated() {
@@ -88,8 +88,9 @@ struct PayoutView: View {
             var y: CGFloat = 120
             for p in payouts {
                 if y > 800 { context.beginPage(); y = 40 }
-                let vals = [p.roomNumber, p.landlord, p.unitType, "¥\(Int(p.annualRent))",
-                            "¥\(Int(p.monthlyPayout))", "\(p.rentFreeDays)天", p.manager]
+                let monthlyPayout = p.annualRent / 12
+                let vals = [p.roomNumber, p.manager, p.unitType, "¥\(Int(p.annualRent))",
+                            "¥\(Int(monthlyPayout))", "\(p.rentFreeDays)天", p.paymentMethod]
                 x = 45
                 for (i, v) in vals.enumerated() {
                     (v as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: [.font: UIFont.systemFont(ofSize: 9)])
@@ -105,7 +106,7 @@ struct PayoutView: View {
     }
 
     private func exportTemplate() {
-        let csv = "房号,房东,户型,起租日,到期日,年租金,月打租,免租期,支付方式,管理人,备注\n1-101,张三,单间上层,2026-01-01,2027-12-31,12000,1000,15,月付,李四,示例\n"
+        let csv = "房号,管理人,户型,起租日,到期日,年租金,免租期,支付方式,备注\n1-101,李四,单间上层,2026-01-01,2027-12-31,12000,15,月付,示例\n"
         let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("打租记录-模板.csv")
         try? csv.write(to: fileURL, atomically: true, encoding: .utf8)
         exportURL = ExportURL(url: fileURL)
@@ -119,16 +120,15 @@ struct PayoutView: View {
         let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
         for line in lines {
             let cols = line.components(separatedBy: ",")
-            guard cols.count >= 7 else { continue }
+            guard cols.count >= 6 else { continue }
             let p = PayoutRecord(
-                roomNumber: cols[0], landlord: cols[1], unitType: cols[2],
+                roomNumber: cols[0], manager: cols[1], unitType: cols[2],
                 leaseStartDate: df.date(from: cols[3]) ?? Date(),
                 leaseEndDate: df.date(from: cols[4]) ?? Date(),
-                annualRent: Double(cols[5]) ?? 0, monthlyPayout: Double(cols[6]) ?? 0,
-                rentFreeDays: cols.count > 7 ? Int(cols[7]) ?? 0 : 0,
-                paymentMethod: cols.count > 8 ? cols[8] : "月付",
-                manager: cols.count > 9 ? cols[9] : "",
-                notes: cols.count > 10 ? cols[10] : ""
+                annualRent: Double(cols[5]) ?? 0,
+                rentFreeDays: cols.count > 6 ? Int(cols[6]) ?? 0 : 0,
+                paymentMethod: cols.count > 7 ? cols[7] : "月付",
+                notes: cols.count > 8 ? cols[8] : ""
             )
             modelContext.insert(p)
         }
