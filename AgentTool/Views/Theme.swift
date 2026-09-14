@@ -401,27 +401,26 @@ func makeExcelHTML(title: String, headers: [String], rows: [[String]]) -> String
     return html
 }
 
-// MARK: - UIKit 文件选择器（解决fileImporter无法选择某些文件类型的问题）
-struct DocumentPicker: UIViewControllerRepresentable {
+// MARK: - 全局文件选择器（直接通过UIWindow弹出，避免sheet包装问题）
+private class DocumentPickerDelegate: NSObject, UIDocumentPickerDelegate {
     let onPick: (URL) -> Void
-
-    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.item])
-        picker.allowsMultipleSelection = false
-        picker.delegate = context.coordinator
-        return picker
+    init(onPick: @escaping (URL) -> Void) { self.onPick = onPick }
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        if let url = urls.first { onPick(url) }
     }
+}
 
-    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+private var currentPickerDelegate: DocumentPickerDelegate?
 
-    func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick) }
+func presentDocumentPicker(onPick: @escaping (URL) -> Void) {
+    guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+          let window = scene.windows.first(where: { $0.isKeyWindow }),
+          let rootVC = window.rootViewController else { return }
 
-    class Coordinator: NSObject, UIDocumentPickerDelegate {
-        let onPick: (URL) -> Void
-        init(onPick: @escaping (URL) -> Void) { self.onPick = onPick }
-
-        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-            if let url = urls.first { onPick(url) }
-        }
-    }
+    let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.item])
+    picker.allowsMultipleSelection = false
+    let delegate = DocumentPickerDelegate(onPick: onPick)
+    currentPickerDelegate = delegate
+    picker.delegate = delegate
+    rootVC.present(picker, animated: true)
 }

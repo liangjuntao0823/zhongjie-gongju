@@ -6,8 +6,8 @@ struct PayoutView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \PayoutRecord.roomNumber) private var payouts: [PayoutRecord]
     @State private var showingAddPayout = false
+    @State private var editingPayout: PayoutRecord?
     @State private var selectedPayout: PayoutRecord?
-    @State private var showFileImporter = false
     @State private var exportURL: ExportURL?
 
     var body: some View {
@@ -20,8 +20,16 @@ struct PayoutView: View {
                         .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                         .contentShape(Rectangle())
                         .onTapGesture { selectedPayout = payout }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                if let idx = payouts.firstIndex(where: { $0.id == payout.id }) {
+                                    modelContext.delete(payouts[idx])
+                                }
+                            } label: { Label("删除", systemImage: "trash") }
+                            Button { editingPayout = payout } label: { Label("修改", systemImage: "pencil") }
+                                .tint(.themeAccent)
+                        }
                 }
-                .onDelete(perform: deletePayout)
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
@@ -45,7 +53,7 @@ struct PayoutView: View {
                         Button { exportTemplate() } label: {
                             Label("导出Excel模板", systemImage: "doc.text")
                         }
-                        Button { showFileImporter = true } label: {
+                        Button { presentDocumentPicker { url in importFromFile(url: url) } } label: {
                             Label("导入数据", systemImage: "square.and.arrow.down")
                         }
                     } label: {
@@ -59,10 +67,8 @@ struct PayoutView: View {
                 }
             }
             .sheet(isPresented: $showingAddPayout) { AddPayoutView() }
+            .sheet(item: $editingPayout) { payout in AddPayoutView(payout: payout) }
             .sheet(item: $selectedPayout) { payout in PayoutDetailView(payout: payout) }
-            .sheet(isPresented: $showFileImporter) {
-                DocumentPicker { url in importFromFile(url: url) }
-            }
             .sheet(item: $exportURL) { url in ShareSheet(activityItems: [url.url]) }
         }
     }
@@ -344,21 +350,39 @@ struct AddPayoutView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
-    @State private var roomNumber = ""
-    @State private var manager = ""
-    @State private var unitType = ""
-    @State private var leaseStartDate = Date()
-    @State private var leaseEndDate = Date()
-    @State private var leaseDuration = ""
-    @State private var rentFreeDays = 0
-    @State private var annualRentText = ""
-    @State private var depositText = ""
-    @State private var waterMeterBase = 0
-    @State private var paymentMethod = "月付"
-    @State private var notes = ""
+    private let editingPayout: PayoutRecord?
+
+    @State private var roomNumber: String
+    @State private var manager: String
+    @State private var unitType: String
+    @State private var leaseStartDate: Date
+    @State private var leaseEndDate: Date
+    @State private var leaseDuration: String
+    @State private var rentFreeDaysText: String
+    @State private var annualRentText: String
+    @State private var depositText: String
+    @State private var waterMeterText: String
+    @State private var paymentMethod: String
+    @State private var notes: String
 
     private let unitTypes = ["单间上层","单间下层","独立厨房上层","独立厨房下层","复式","中空复式","平层","双钥匙一套","三房"]
     private let methods = ["月付","季付"]
+
+    init(payout: PayoutRecord? = nil) {
+        editingPayout = payout
+        _roomNumber = State(initialValue: payout?.roomNumber ?? "")
+        _manager = State(initialValue: payout?.manager ?? "")
+        _unitType = State(initialValue: payout?.unitType ?? "")
+        _leaseStartDate = State(initialValue: payout?.leaseStartDate ?? Date())
+        _leaseEndDate = State(initialValue: payout?.leaseEndDate ?? Date())
+        _leaseDuration = State(initialValue: payout?.leaseDuration ?? "")
+        _rentFreeDaysText = State(initialValue: payout.map { $0.rentFreeDays > 0 ? String($0.rentFreeDays) : "" } ?? "")
+        _annualRentText = State(initialValue: payout.map { $0.annualRent > 0 ? String(Int($0.annualRent)) : "" } ?? "")
+        _depositText = State(initialValue: payout.map { $0.deposit > 0 ? String(Int($0.deposit)) : "" } ?? "")
+        _waterMeterText = State(initialValue: payout.map { $0.waterMeterBase > 0 ? String($0.waterMeterBase) : "" } ?? "")
+        _paymentMethod = State(initialValue: payout?.paymentMethod ?? "月付")
+        _notes = State(initialValue: payout?.notes ?? "")
+    }
 
     var body: some View {
         NavigationStack {
@@ -372,36 +396,49 @@ struct AddPayoutView: View {
                     WheelDateField(label: "起租期", date: $leaseStartDate)
                     WheelDateField(label: "到期日", date: $leaseEndDate)
                     TextField("租期（自由输入）", text: $leaseDuration)
-                    Stepper(value: $rentFreeDays, in: 0...365) {
-                        HStack { Text("免租期"); Spacer(); Text("\(rentFreeDays)天").foregroundColor(.themeText2) }
-                    }
+                    TextField("免租期（天）", text: $rentFreeDaysText)
+                        .keyboardType(.numberPad)
                     Picker("付款方式", selection: $paymentMethod) { ForEach(methods, id: \.self) { Text($0).tag($0) } }
                 }
                 Section("金额") {
                     AmountField(label: "年租金", text: $annualRentText)
                     AmountField(label: "押金", text: $depositText)
-                    Stepper(value: $waterMeterBase, in: 0...999999) {
-                        HStack { Text("水表底数"); Spacer(); Text("\(waterMeterBase)").foregroundColor(.themeText2) }
-                    }
+                    TextField("水表底数", text: $waterMeterText)
+                        .keyboardType(.numberPad)
                 }
                 Section("备注") { TextField("备注", text: $notes, axis: .vertical) }
             }
             .scrollContentBackground(.hidden)
             .background(Color.themeBg)
-            .navigationTitle("新增包租")
+            .navigationTitle(editingPayout == nil ? "新增包租" : "编辑包租")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
-                        let payout = PayoutRecord(
-                            roomNumber: roomNumber, manager: manager, unitType: unitType,
-                            leaseStartDate: leaseStartDate, leaseEndDate: leaseEndDate,
-                            leaseDuration: leaseDuration, rentFreeDays: rentFreeDays,
-                            annualRent: Double(annualRentText) ?? 0,
-                            deposit: Double(depositText) ?? 0,
-                            waterMeterBase: waterMeterBase, paymentMethod: paymentMethod, notes: notes)
-                        modelContext.insert(payout)
+                        if let p = editingPayout {
+                            p.roomNumber = roomNumber
+                            p.manager = manager
+                            p.unitType = unitType
+                            p.leaseStartDate = leaseStartDate
+                            p.leaseEndDate = leaseEndDate
+                            p.leaseDuration = leaseDuration
+                            p.rentFreeDays = Int(rentFreeDaysText) ?? 0
+                            p.annualRent = Double(annualRentText) ?? 0
+                            p.deposit = Double(depositText) ?? 0
+                            p.waterMeterBase = Int(waterMeterText) ?? 0
+                            p.paymentMethod = paymentMethod
+                            p.notes = notes
+                        } else {
+                            let payout = PayoutRecord(
+                                roomNumber: roomNumber, manager: manager, unitType: unitType,
+                                leaseStartDate: leaseStartDate, leaseEndDate: leaseEndDate,
+                                leaseDuration: leaseDuration, rentFreeDays: Int(rentFreeDaysText) ?? 0,
+                                annualRent: Double(annualRentText) ?? 0,
+                                deposit: Double(depositText) ?? 0,
+                                waterMeterBase: Int(waterMeterText) ?? 0, paymentMethod: paymentMethod, notes: notes)
+                            modelContext.insert(payout)
+                        }
                         dismiss()
                     }
                     .disabled(roomNumber.isEmpty)

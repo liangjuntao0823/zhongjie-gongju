@@ -12,6 +12,10 @@ struct DashboardView: View {
     @State private var showAddPayout = false
     @State private var showAddIncome = false
     @State private var showAddExpense = false
+    @State private var quickCollectProperty: Property?
+    @State private var quickCollectRent = ""
+    @State private var quickCollectWater = ""
+    @State private var quickCollectElectric = ""
 
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
@@ -67,6 +71,7 @@ struct DashboardView: View {
                 let utilitySettled = isUtilitySettled(for: prop, currentMonth: currentMonth, currentYear: currentYear)
 
                 reminders.append(RentReminder(
+                    property: prop,
                     roomNumber: prop.roomNumber,
                     landlord: prop.landlord,
                     amount: prop.rent,
@@ -105,6 +110,55 @@ struct DashboardView: View {
         let monthsDiff = (currentYear - 2025) * 12 + (currentMonth - startMonth)
         let quarterIndex = (monthsDiff / 3 - 1) % 4 + 1
         return prop.quarterlyUtilityRecords.contains { $0.quarter == quarterIndex && $0.isSettled }
+    }
+
+    // 快捷收租保存
+    private func saveQuickCollect(property: Property) {
+        let calendar = Calendar.current
+        let now = Date()
+        let currentMonth = calendar.component(.month, from: now)
+        let currentYear = calendar.component(.year, from: now)
+
+        // 1. 添加月度收租记录
+        let rentAmount = Double(quickCollectRent) ?? property.rent
+        // 检查是否已有本月记录，有则更新，无则新增
+        if let existing = property.monthlyRentRecords.first(where: { $0.month == currentMonth }) {
+            existing.amount = rentAmount
+            existing.isPaid = true
+            existing.paidDate = now
+        } else {
+            let record = RentMonthRecord(month: currentMonth, amount: rentAmount, isPaid: true)
+            record.paidDate = now
+            property.monthlyRentRecords.append(record)
+        }
+
+        // 2. 如果需要结算水电且输入了水电费，添加季度水电记录
+        let needUtility = needsUtilitySettlement(for: property, currentMonth: currentMonth, currentYear: currentYear)
+        if needUtility && (!quickCollectWater.isEmpty || !quickCollectElectric.isEmpty) {
+            // 计算季度索引
+            var startMonth = currentMonth
+            if let firstRecord = property.monthlyRentRecords.sorted(by: { $0.month < $1.month }).first {
+                startMonth = firstRecord.month
+            }
+            let monthsDiff = (currentYear - 2025) * 12 + (currentMonth - startMonth)
+            let quarterIndex = (monthsDiff / 3 - 1) % 4 + 1
+
+            let waterAmount = Double(quickCollectWater) ?? 0
+            let electricAmount = Double(quickCollectElectric) ?? 0
+            // 检查是否已有本季度记录
+            if let existing = property.quarterlyUtilityRecords.first(where: { $0.quarter == quarterIndex }) {
+                existing.waterAmount = waterAmount
+                existing.electricAmount = electricAmount
+                existing.isSettled = true
+                existing.settledDate = now
+            } else {
+                let util = UtilityQuarterRecord(quarter: quarterIndex, waterAmount: waterAmount, electricAmount: electricAmount, isSettled: true)
+                util.settledDate = now
+                property.quarterlyUtilityRecords.append(util)
+            }
+        }
+
+        quickCollectProperty = nil
     }
 
     // 计算距离到期的天数
@@ -273,48 +327,53 @@ struct DashboardView: View {
                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.themeBorder, lineWidth: 1))
                 .padding(.horizontal)
 
-                // 租期提醒
-                if let expiring = stats?.expiringSoon, !expiring.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(Color.themeAccent)
-                                .frame(width: 8, height: 8)
-                            Text("租期提醒")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.themeText)
-                            Text("30天内到期")
-                                .font(.system(size: 12))
-                                .foregroundColor(.themeText3)
-                            Spacer()
-                        }
+                // 租期提醒（常显标题，无数据时只显示标题）
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(Color.themeAccent)
+                            .frame(width: 8, height: 8)
+                        Text("租期提醒")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.themeText)
+                        Text("30天内到期")
+                            .font(.system(size: 12))
+                            .foregroundColor(.themeText3)
+                        Spacer()
+                    }
+                    if let expiring = stats?.expiringSoon, !expiring.isEmpty {
                         ForEach(expiring, id: \.id) { prop in
                             let days = daysUntilExpiry(prop)
-                            HStack(spacing: 12) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(Color(hex: "E8EEF8"))
-                                        .frame(width: 44, height: 44)
-                                    Text(String(prop.roomNumber.prefix(2)))
-                                        .font(.system(size: 14, weight: .bold))
-                                        .foregroundColor(Color(hex: "4A6FA5"))
-                                }
-                                VStack(alignment: .leading, spacing: 3) {
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
                                     Text(prop.roomNumber)
                                         .font(.system(size: 14, weight: .semibold))
                                         .foregroundColor(.themeText)
-                                    Text("\(prop.leaseEnd) 到期 · 还剩\(days)天")
+                                    Spacer()
+                                    Text("还剩\(days)天")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundColor(days <= 7 ? .themeRed : .themeAmber)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(days <= 7 ? Color(hex: "FDF0F0") : Color(hex: "FBF1DE"))
+                                        .cornerRadius(8)
+                                }
+                                HStack(spacing: 12) {
+                                    Text("到期: \(prop.leaseEnd)")
+                                        .font(.system(size: 11.5))
+                                        .foregroundColor(.themeText3)
+                                    Text("房东: \(prop.landlord)")
                                         .font(.system(size: 11.5))
                                         .foregroundColor(.themeText3)
                                 }
-                                Spacer()
-                                Text("还剩\(days)天")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundColor(days <= 7 ? .themeRed : .themeAmber)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 5)
-                                    .background(days <= 7 ? Color(hex: "FDF0F0") : Color(hex: "FBF1DE"))
-                                    .cornerRadius(8)
+                                HStack(spacing: 12) {
+                                    Text("租金: ¥\(Int(prop.rent))")
+                                        .font(.system(size: 11.5))
+                                        .foregroundColor(.themeText3)
+                                    Text("押金: ¥\(Int(prop.deposit))")
+                                        .font(.system(size: 11.5))
+                                        .foregroundColor(.themeText3)
+                                }
                             }
                             .padding(.vertical, 4)
                             if prop.id != expiring.last?.id {
@@ -322,12 +381,12 @@ struct DashboardView: View {
                             }
                         }
                     }
-                    .padding(16)
-                    .background(Color.themePanel)
-                    .cornerRadius(14)
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.themeBorder, lineWidth: 1))
-                    .padding(.horizontal)
                 }
+                .padding(16)
+                .background(Color.themePanel)
+                .cornerRadius(14)
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.themeBorder, lineWidth: 1))
+                .padding(.horizontal)
 
                 // 收租进度
                 VStack(alignment: .leading, spacing: 10) {
@@ -352,11 +411,11 @@ struct DashboardView: View {
                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.themeBorder, lineWidth: 1))
                 .padding(.horizontal)
 
-                // 未收租提醒
-                if !upcomingRentReminders.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        SectionTitle(title: "未收租提醒", subtitle: "\(upcomingRentReminders.count)套")
-                        ForEach(upcomingRentReminders, id: \.roomNumber) { reminder in
+                // 未收租提醒（常显标题，无数据时只显示标题）
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionTitle(title: "未收租提醒", subtitle: "\(upcomingRentReminders.count)套")
+                    if !upcomingRentReminders.isEmpty {
+                        ForEach(upcomingRentReminders) { reminder in
                             HStack(spacing: 10) {
                                 VStack(alignment: .center, spacing: 2) {
                                     Text("\(reminder.dueDay)")
@@ -384,29 +443,46 @@ struct DashboardView: View {
                                     Text("¥\(Int(reminder.amount))")
                                         .font(.system(size: 13, weight: .semibold))
                                         .foregroundColor(.themeText)
-                                    if reminder.needUtility {
-                                        HStack(spacing: 3) {
-                                            Text("水电")
-                                                .font(.system(size: 10))
-                                                .foregroundColor(.themeText3)
+                                    HStack(spacing: 3) {
+                                        Text("水电")
+                                            .font(.system(size: 10))
+                                            .foregroundColor(.themeText3)
+                                        if reminder.needUtility {
                                             Text(reminder.utilitySettled ? "✅" : "❌")
                                                 .font(.system(size: 12))
+                                        } else {
+                                            Text("—")
+                                                .font(.system(size: 12))
+                                                .foregroundColor(.themeText3)
                                         }
                                     }
                                 }
+                                // 收按钮
+                                Button {
+                                    quickCollectProperty = reminder.property
+                                    quickCollectRent = String(Int(reminder.amount))
+                                    quickCollectWater = ""
+                                    quickCollectElectric = ""
+                                } label: {
+                                    Text("收")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(.white)
+                                        .frame(width: 36, height: 36)
+                                        .background(Circle().fill(Color.themeAccent))
+                                }
                             }
                             .padding(.vertical, 4)
-                            if reminder.roomNumber != upcomingRentReminders.last?.roomNumber {
+                            if reminder.id != upcomingRentReminders.last?.id {
                                 Divider().background(Color.themeBorder)
                             }
                         }
                     }
-                    .padding(16)
-                    .background(Color.themePanel)
-                    .cornerRadius(14)
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.themeBorder, lineWidth: 1))
-                    .padding(.horizontal)
                 }
+                .padding(16)
+                .background(Color.themePanel)
+                .cornerRadius(14)
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.themeBorder, lineWidth: 1))
+                .padding(.horizontal)
 
                 // 即将到期
                 if let expiring = stats?.expiringSoon, !expiring.isEmpty {
@@ -482,13 +558,20 @@ struct DashboardView: View {
         .sheet(isPresented: $showAddExpense) {
             NavigationStack { AddMiscView(type: .expense) }
         }
+        .sheet(item: $quickCollectProperty) { prop in
+            QuickCollectSheet(property: prop, rentText: $quickCollectRent, waterText: $quickCollectWater, electricText: $quickCollectElectric, onSave: {
+                saveQuickCollect(property: prop)
+            })
+        }
         .navigationTitle("工作台")
         .navigationBarHidden(true)
     }
 }
 
 // MARK: - 未收租提醒模型
-struct RentReminder {
+struct RentReminder: Identifiable {
+    let id = UUID()
+    let property: Property
     let roomNumber: String
     let landlord: String
     let amount: Double
@@ -496,6 +579,52 @@ struct RentReminder {
     let daysUntilDue: Int
     let needUtility: Bool
     let utilitySettled: Bool
+}
+
+// MARK: - 快捷收租弹窗
+struct QuickCollectSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let property: Property
+    @Binding var rentText: String
+    @Binding var waterText: String
+    @Binding var electricText: String
+    let onSave: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("房源信息") {
+                    LabeledContent("房号", value: property.roomNumber)
+                    LabeledContent("房东", value: property.landlord)
+                }
+                Section("收租金额") {
+                    TextField("实收租金", text: $rentText)
+                        .keyboardType(.decimalPad)
+                }
+                Section("水电结算（非必填）") {
+                    TextField("水费", text: $waterText)
+                        .keyboardType(.decimalPad)
+                    TextField("电费", text: $electricText)
+                        .keyboardType(.decimalPad)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color.themeBg)
+            .navigationTitle("快捷收租")
+            .navigationBarTitleDisplayMode(.inline)
+            .presentationDetents([.medium])
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存") {
+                        onSave()
+                        dismiss()
+                    }
+                    .foregroundColor(.themeAccent)
+                }
+            }
+        }
+    }
 }
 
 // MARK: - KPI 卡片

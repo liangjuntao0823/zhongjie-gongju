@@ -16,7 +16,6 @@ struct DealsView: View {
     @State private var editingIncome: MiscIncome?
     @State private var editingExpense: MiscExpense?
     @State private var showImportExport = false
-    @State private var showFileImporter = false
     @State private var exportURL: ExportURL?
 
     private let availableYears = [2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035]
@@ -145,7 +144,9 @@ struct DealsView: View {
                             Label("导出Excel模板", systemImage: "doc.text")
                         }
                         Button {
-                            showFileImporter = true
+                            presentDocumentPicker { url in
+                                importFromFile(url: url)
+                            }
                         } label: {
                             Label("导入数据", systemImage: "square.and.arrow.down")
                         }
@@ -177,11 +178,6 @@ struct DealsView: View {
             }
             .sheet(item: $editingExpense) { exp in
                 EditMiscView(item: .expense(exp))
-            }
-            .sheet(isPresented: $showFileImporter) {
-                DocumentPicker { url in
-                    importFromFile(url: url)
-                }
             }
             .sheet(item: $exportURL) { export in
                 ShareSheet(activityItems: [export.url])
@@ -379,8 +375,16 @@ struct DealsView: View {
                     .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                     .contentShape(Rectangle())
                     .onTapGesture { editingDeal = deal }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            if let idx = filteredDeals.firstIndex(where: { $0.id == deal.id }) {
+                                modelContext.delete(filteredDeals[idx])
+                            }
+                        } label: { Label("删除", systemImage: "trash") }
+                        Button { editingDeal = deal } label: { Label("修改", systemImage: "pencil") }
+                            .tint(.themeAccent)
+                    }
             }
-            .onDelete(perform: deleteDeal)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -401,8 +405,16 @@ struct DealsView: View {
                     .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                     .contentShape(Rectangle())
                     .onTapGesture { editingIncome = inc }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            if let idx = filteredIncomes.firstIndex(where: { $0.id == inc.id }) {
+                                modelContext.delete(filteredIncomes[idx])
+                            }
+                        } label: { Label("删除", systemImage: "trash") }
+                        Button { editingIncome = inc } label: { Label("修改", systemImage: "pencil") }
+                            .tint(.themeAccent)
+                    }
             }
-            .onDelete(perform: deleteIncome)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -423,8 +435,16 @@ struct DealsView: View {
                     .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                     .contentShape(Rectangle())
                     .onTapGesture { editingExpense = exp }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            if let idx = filteredExpenses.firstIndex(where: { $0.id == exp.id }) {
+                                modelContext.delete(filteredExpenses[idx])
+                            }
+                        } label: { Label("删除", systemImage: "trash") }
+                        Button { editingExpense = exp } label: { Label("修改", systemImage: "pencil") }
+                            .tint(.themeAccent)
+                    }
             }
-            .onDelete(perform: deleteExpense)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)

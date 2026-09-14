@@ -6,11 +6,11 @@ struct RentCollectionView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Property.roomNumber) private var properties: [Property]
     @State private var showingAddProperty = false
+    @State private var editingProperty: Property?
     @State private var selectedProperty: Property?
     @State private var searchText = ""
     @State private var selectedDueDay: Int? = nil
     @State private var showUtility = false
-    @State private var showFileImporter = false
     @State private var exportURL: ExportURL?
 
     // 只显示已登记的交租日期
@@ -80,8 +80,16 @@ struct RentCollectionView: View {
                             .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                             .contentShape(Rectangle())
                             .onTapGesture { selectedProperty = prop }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    if let idx = filteredProperties.firstIndex(where: { $0.id == prop.id }) {
+                                        modelContext.delete(filteredProperties[idx])
+                                    }
+                                } label: { Label("删除", systemImage: "trash") }
+                                Button { editingProperty = prop } label: { Label("修改", systemImage: "pencil") }
+                                    .tint(.themeAccent)
+                            }
                     }
-                    .onDelete(perform: deleteProperty)
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
@@ -114,7 +122,9 @@ struct RentCollectionView: View {
                             Label("导出Excel模板", systemImage: "doc.text")
                         }
                         Button {
-                            showFileImporter = true
+                            presentDocumentPicker { url in
+                                importFromFile(url: url)
+                            }
                         } label: {
                             Label("导入数据", systemImage: "square.and.arrow.down")
                         }
@@ -135,13 +145,9 @@ struct RentCollectionView: View {
                 }
             }
             .sheet(isPresented: $showingAddProperty) { AddPropertyView() }
+            .sheet(item: $editingProperty) { prop in AddPropertyView(property: prop) }
             .sheet(item: $selectedProperty) { prop in PropertyDetailView(property: prop) }
             .sheet(isPresented: $showUtility) { NavigationStack { UtilityView() } }
-            .sheet(isPresented: $showFileImporter) {
-                DocumentPicker { url in
-                    importFromFile(url: url)
-                }
-            }
             .sheet(item: $exportURL) { url in
                 ShareSheet(activityItems: [url.url])
             }
@@ -519,23 +525,45 @@ struct AddPropertyView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
-    @State private var roomNumber = ""
-    @State private var landlord = ""
-    @State private var unitType = ""
-    @State private var rentText = ""
-    @State private var depositText = ""
-    @State private var prepaymentText = ""
-    @State private var leaseStartDate = Date()
-    @State private var leaseEndDate = Date()
-    @State private var leaseDuration = ""
-    @State private var rentDueDay = 1
-    @State private var waterMeterBase = 0
-    @State private var electricMeterBase = 0
-    @State private var propertyType = "普通"
-    @State private var notes = ""
+    private let editingProperty: Property?
+
+    @State private var roomNumber: String
+    @State private var landlord: String
+    @State private var unitType: String
+    @State private var rentText: String
+    @State private var depositText: String
+    @State private var prepaymentText: String
+    @State private var leaseStartDate: Date
+    @State private var leaseEndDate: Date
+    @State private var leaseDuration: String
+    @State private var rentDueDay: Int
+    @State private var waterMeterText: String
+    @State private var electricMeterText: String
+    @State private var propertyType: String
+    @State private var notes: String
 
     private let unitTypes = ["单间上层","单间下层","独立厨房上层","独立厨房下层","复式","中空复式","平层","双钥匙一套","三房"]
     private let types = ["普通","包租","托管"]
+
+    init(property: Property? = nil) {
+        editingProperty = property
+        let df = DateFormatter()
+        df.dateFormat = "yyyy.M.d"
+        _roomNumber = State(initialValue: property?.roomNumber ?? "")
+        _landlord = State(initialValue: property?.landlord ?? "")
+        _unitType = State(initialValue: property?.unitType ?? "")
+        _rentText = State(initialValue: property.map { $0.rent > 0 ? String(Int($0.rent)) : "" } ?? "")
+        _depositText = State(initialValue: property.map { $0.deposit > 0 ? String(Int($0.deposit)) : "" } ?? "")
+        _prepaymentText = State(initialValue: property.map { $0.prepayment > 0 ? String(Int($0.prepayment)) : "" } ?? "")
+        _leaseStartDate = State(initialValue: property.flatMap { df.date(from: $0.leaseStart) } ?? Date())
+        _leaseEndDate = State(initialValue: property.flatMap { df.date(from: $0.leaseEnd) } ?? Date())
+        _leaseDuration = State(initialValue: property?.leaseDuration ?? "")
+        _rentDueDay = State(initialValue: property?.rentDueDay ?? 1)
+        _waterMeterText = State(initialValue: property.map { $0.waterMeterBase > 0 ? String($0.waterMeterBase) : "" } ?? "")
+        _electricMeterText = State(initialValue: property.map { $0.electricMeterBase > 0 ? String($0.electricMeterBase) : "" } ?? "")
+        _propertyType = State(initialValue: property?.propertyType ?? "普通")
+        _notes = State(initialValue: property?.notes ?? "")
+    }
 
     var body: some View {
         NavigationStack {
@@ -560,18 +588,16 @@ struct AddPropertyView: View {
                     AmountField(label: "预存", text: $prepaymentText)
                 }
                 Section("水电底数（整数）") {
-                    Stepper(value: $waterMeterBase, in: 0...999999) {
-                        HStack { Text("水表底数"); Spacer(); Text("\(waterMeterBase)").foregroundColor(.themeText2) }
-                    }
-                    Stepper(value: $electricMeterBase, in: 0...999999) {
-                        HStack { Text("电表底数"); Spacer(); Text("\(electricMeterBase)").foregroundColor(.themeText2) }
-                    }
+                    TextField("水表底数", text: $waterMeterText)
+                        .keyboardType(.numberPad)
+                    TextField("电表底数", text: $electricMeterText)
+                        .keyboardType(.numberPad)
                 }
                 Section("备注") { TextField("备注", text: $notes, axis: .vertical) }
             }
             .scrollContentBackground(.hidden)
             .background(Color.themeBg)
-            .navigationTitle("新增收租")
+            .navigationTitle(editingProperty == nil ? "新增收租" : "编辑收租")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
@@ -579,13 +605,30 @@ struct AddPropertyView: View {
                     Button("保存") {
                         let df = DateFormatter()
                         df.dateFormat = "yyyy.M.d"
-                        let prop = Property(roomNumber: roomNumber, landlord: landlord, unitType: unitType,
-                            rent: Double(rentText) ?? 0, deposit: Double(depositText) ?? 0,
-                            prepayment: Double(prepaymentText) ?? 0, leaseStart: df.string(from: leaseStartDate),
-                            leaseEnd: df.string(from: leaseEndDate), leaseDuration: leaseDuration, rentDueDay: rentDueDay,
-                            waterMeterBase: waterMeterBase, electricMeterBase: electricMeterBase,
-                            propertyType: propertyType, notes: notes)
-                        modelContext.insert(prop)
+                        if let prop = editingProperty {
+                            prop.roomNumber = roomNumber
+                            prop.landlord = landlord
+                            prop.unitType = unitType
+                            prop.rent = Double(rentText) ?? 0
+                            prop.deposit = Double(depositText) ?? 0
+                            prop.prepayment = Double(prepaymentText) ?? 0
+                            prop.leaseStart = df.string(from: leaseStartDate)
+                            prop.leaseEnd = df.string(from: leaseEndDate)
+                            prop.leaseDuration = leaseDuration
+                            prop.rentDueDay = rentDueDay
+                            prop.waterMeterBase = Int(waterMeterText) ?? 0
+                            prop.electricMeterBase = Int(electricMeterText) ?? 0
+                            prop.propertyType = propertyType
+                            prop.notes = notes
+                        } else {
+                            let prop = Property(roomNumber: roomNumber, landlord: landlord, unitType: unitType,
+                                rent: Double(rentText) ?? 0, deposit: Double(depositText) ?? 0,
+                                prepayment: Double(prepaymentText) ?? 0, leaseStart: df.string(from: leaseStartDate),
+                                leaseEnd: df.string(from: leaseEndDate), leaseDuration: leaseDuration, rentDueDay: rentDueDay,
+                                waterMeterBase: Int(waterMeterText) ?? 0, electricMeterBase: Int(electricMeterText) ?? 0,
+                                propertyType: propertyType, notes: notes)
+                            modelContext.insert(prop)
+                        }
                         dismiss()
                     }
                     .disabled(roomNumber.isEmpty)
