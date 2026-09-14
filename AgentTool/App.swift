@@ -2,10 +2,11 @@ import SwiftUI
 import SwiftData
 
 @main
-struct 中介工具App: App {
+struct AgentToolApp: App {
     var body: some Scene {
         WindowGroup {
             MainTabView()
+                .tint(.themeAccent)
         }
         .modelContainer(for: [
             Property.self,
@@ -22,11 +23,29 @@ struct 中介工具App: App {
 }
 
 struct MainTabView: View {
+    init() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor(Color.themePanel)
+        appearance.selectionIndicatorTintColor = UIColor(Color.themeAccent)
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+        UITabBar.appearance().tintColor = UIColor(Color.themeAccent)
+        UITabBar.appearance().unselectedItemTintColor = UIColor(Color.themeText3)
+
+        let navAppearance = UINavigationBarAppearance()
+        navAppearance.configureWithOpaqueBackground()
+        navAppearance.backgroundColor = UIColor(Color.themeBg)
+        navAppearance.titleTextAttributes = [.foregroundColor: UIColor(Color.themeText)]
+        UINavigationBar.appearance().standardAppearance = navAppearance
+        UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
+    }
+
     var body: some View {
         TabView {
             DashboardView()
                 .tabItem {
-                    Label("首页", systemImage: "house.fill")
+                    Label("工作台", systemImage: "house.fill")
                 }
 
             DealsView()
@@ -54,6 +73,6 @@ struct MainTabView: View {
                     Label("水电", systemImage: "bolt.fill")
                 }
         }
-        .tint(.blue)
+        .tint(.themeAccent)
     }
 }

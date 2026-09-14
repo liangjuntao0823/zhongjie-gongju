@@ -19,6 +19,7 @@ struct DealsView: View {
                 }
                 .pickerStyle(.segmented)
                 .padding()
+                .background(Color.themeBg)
 
                 if selectedTab == 0 {
                     dealList
@@ -28,13 +29,16 @@ struct DealsView: View {
                     expenseList
                 }
             }
+            .background(Color.themeBg)
             .navigationTitle("成交管理")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showingAddDeal = true
                     } label: {
-                        Image(systemName: "plus")
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundColor(.themeAccent)
                     }
                 }
             }
@@ -54,10 +58,15 @@ struct DealsView: View {
         List {
             ForEach(deals) { deal in
                 DealRow(deal: deal)
+                    .listRowBackground(Color.themeBg)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
             }
             .onDelete(perform: deleteDeal)
         }
         .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.themeBg)
         .overlay {
             if deals.isEmpty {
                 ContentUnavailableView("暂无成交记录", systemImage: "doc.text", description: Text("点击右上角 + 添加成交记录"))
@@ -68,73 +77,41 @@ struct DealsView: View {
     private var incomeList: some View {
         List {
             ForEach(incomes) { inc in
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text(inc.item)
-                            .fontWeight(.medium)
-                        Text(inc.notes)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing) {
-                        Text("+¥\(Int(inc.amount))")
-                            .foregroundColor(.green)
-                            .fontWeight(.medium)
-                        Text(inc.date, style: .date)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
+                MiscRow(title: inc.item, subtitle: inc.notes, amount: inc.amount, date: inc.date, isIncome: true)
+                    .listRowBackground(Color.themeBg)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
             }
             .onDelete(perform: deleteIncome)
         }
         .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.themeBg)
     }
 
     private var expenseList: some View {
         List {
             ForEach(expenses) { exp in
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text(exp.item)
-                            .fontWeight(.medium)
-                        Text(exp.notes)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing) {
-                        Text("-¥\(Int(exp.amount))")
-                            .foregroundColor(.red)
-                            .fontWeight(.medium)
-                        Text(exp.date, style: .date)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
+                MiscRow(title: exp.item, subtitle: exp.notes, amount: exp.amount, date: exp.date, isIncome: false)
+                    .listRowBackground(Color.themeBg)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
             }
             .onDelete(perform: deleteExpense)
         }
         .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.themeBg)
     }
 
     private func deleteDeal(at offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(deals[index])
-        }
+        for index in offsets { modelContext.delete(deals[index]) }
     }
-
     private func deleteIncome(at offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(incomes[index])
-        }
+        for index in offsets { modelContext.delete(incomes[index]) }
     }
-
     private func deleteExpense(at offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(expenses[index])
-        }
+        for index in offsets { modelContext.delete(expenses[index]) }
     }
 }
 
@@ -143,48 +120,97 @@ struct DealRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.blue.opacity(0.1))
-                .frame(width: 44, height: 44)
-                .overlay {
-                    Image(systemName: "doc.text.fill")
-                        .foregroundColor(.blue)
-                }
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.themeAccentWeak)
+                    .frame(width: 44, height: 44)
+                Image(systemName: "doc.text.fill")
+                    .foregroundColor(.themeAccentDark)
+                    .font(.system(size: 18))
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(deal.roomNumber)
-                        .fontWeight(.semibold)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.themeText)
                     Text(deal.unitType)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 11))
+                        .foregroundColor(.themeText3)
                 }
                 HStack(spacing: 8) {
                     Text("房东: \(deal.landlord)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text("租金: ¥\(Int(deal.rent))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 11))
+                        .foregroundColor(.themeText2)
+                    Text("¥\(Int(deal.rent))/月")
+                        .font(.system(size: 11))
+                        .foregroundColor(.themeText2)
                 }
                 if !deal.notes.isEmpty {
                     Text(deal.notes)
-                        .font(.caption2)
-                        .foregroundColor(.orange)
+                        .font(.system(size: 10))
+                        .foregroundColor(.themeAmber)
                         .lineLimit(1)
                 }
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 4) {
                 Text("+¥\(Int(deal.totalFee))")
-                    .foregroundColor(.green)
-                    .fontWeight(.semibold)
+                    .foregroundColor(.themeAccentDark)
+                    .font(.system(size: 15, weight: .semibold))
                 Text(deal.date, style: .date)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 11))
+                    .foregroundColor(.themeText3)
             }
         }
-        .padding(.vertical, 4)
+        .padding(14)
+        .background(Color.themePanel)
+        .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.themeBorder, lineWidth: 1))
+    }
+}
+
+struct MiscRow: View {
+    let title: String
+    let subtitle: String
+    let amount: Double
+    let date: Date
+    let isIncome: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isIncome ? Color.themeAccentWeak : Color(hex: "FDF0F0"))
+                    .frame(width: 44, height: 44)
+                Image(systemName: isIncome ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
+                    .foregroundColor(isIncome ? .themeAccentDark : .themeRed)
+                    .font(.system(size: 18))
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.themeText)
+                if !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.system(size: 11))
+                        .foregroundColor(.themeText3)
+                }
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("\(isIncome ? "+" : "-")¥\(Int(amount))")
+                    .foregroundColor(isIncome ? .themeAccentDark : .themeRed)
+                    .font(.system(size: 15, weight: .semibold))
+                Text(date, style: .date)
+                    .font(.system(size: 11))
+                    .foregroundColor(.themeText3)
+            }
+        }
+        .padding(14)
+        .background(Color.themePanel)
+        .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.themeBorder, lineWidth: 1))
     }
 }
 
@@ -223,7 +249,7 @@ struct AddDealView: View {
                         Text("未选择").tag("")
                         ForEach(unitTypes, id: \.self) { Text($0).tag($0) }
                     }
-                    TextField("起止租期 (如 2026.1.1-2027.1.1)", text: $leasePeriod)
+                    TextField("起止租期", text: $leasePeriod)
                     Picker("租期", selection: $leaseDuration) {
                         ForEach(durations, id: \.self) { Text($0).tag($0) }
                     }
@@ -231,76 +257,40 @@ struct AddDealView: View {
                         ForEach(dueDays, id: \.self) { Text($0).tag($0) }
                     }
                 }
-
                 Section("金额") {
-                    HStack {
-                        Text("月租金")
-                        TextField("0", value: $rent, format: .number)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                    }
-                    HStack {
-                        Text("押金")
-                        TextField("0", value: $deposit, format: .number)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                    }
-                    HStack {
-                        Text("预存")
-                        TextField("0", value: $prepayment, format: .number)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                    }
+                    HStack { Text("月租金"); TextField("0", value: $rent, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
+                    HStack { Text("押金"); TextField("0", value: $deposit, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
+                    HStack { Text("预存"); TextField("0", value: $prepayment, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
                 }
-
                 Section("中介费") {
-                    HStack {
-                        Text("房东中介费")
-                        TextField("0", value: $agentFeeLandlord, format: .number)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                    }
-                    HStack {
-                        Text("租客中介费")
-                        TextField("0", value: $agentFeeTenant, format: .number)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                    }
-                    HStack {
-                        Text("合计")
-                        Spacer()
-                        Text("¥\(Int(agentFeeLandlord + agentFeeTenant))")
-                            .foregroundColor(.green)
-                            .fontWeight(.medium)
-                    }
+                    HStack { Text("房东中介费"); TextField("0", value: $agentFeeLandlord, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
+                    HStack { Text("租客中介费"); TextField("0", value: $agentFeeTenant, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
+                    HStack { Text("合计"); Spacer(); Text("¥\(Int(agentFeeLandlord + agentFeeTenant))").foregroundColor(.themeAccentDark).fontWeight(.medium) }
                 }
-
                 Section("其他") {
                     TextField("管理人", text: $manager)
                     TextField("客源", text: $source)
                     TextField("备注", text: $notes, axis: .vertical)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.themeBg)
             .navigationTitle("新增成交")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
-                }
+                ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
-                        let deal = DealRecord(
-                            date: date, roomNumber: roomNumber, landlord: landlord,
-                            unitType: unitType, leasePeriod: leasePeriod, leaseDuration: leaseDuration,
-                            rent: rent, deposit: deposit, prepayment: prepayment,
-                            rentDueDay: rentDueDay, agentFeeLandlord: agentFeeLandlord,
+                        let deal = DealRecord(date: date, roomNumber: roomNumber, landlord: landlord, unitType: unitType,
+                            leasePeriod: leasePeriod, leaseDuration: leaseDuration, rent: rent, deposit: deposit,
+                            prepayment: prepayment, rentDueDay: rentDueDay, agentFeeLandlord: agentFeeLandlord,
                             agentFeeTenant: agentFeeTenant, totalFee: agentFeeLandlord + agentFeeTenant,
-                            manager: manager, source: source, notes: notes
-                        )
+                            manager: manager, source: source, notes: notes)
                         modelContext.insert(deal)
                         dismiss()
                     }
                     .disabled(roomNumber.isEmpty)
+                    .foregroundColor(.themeAccent)
                 }
             }
         }
@@ -317,9 +307,7 @@ struct AddMiscView: View {
     @State private var amount: Double = 0
     @State private var notes = ""
 
-    enum MiscType {
-        case income, expense
-    }
+    enum MiscType { case income, expense }
 
     var body: some View {
         NavigationStack {
@@ -327,21 +315,16 @@ struct AddMiscView: View {
                 Section("信息") {
                     DatePicker("日期", selection: $date, displayedComponents: .date)
                     TextField("项目", text: $item)
-                    HStack {
-                        Text("金额")
-                        TextField("0", value: $amount, format: .number)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                    }
+                    HStack { Text("金额"); TextField("0", value: $amount, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
                     TextField("备注", text: $notes, axis: .vertical)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.themeBg)
             .navigationTitle(type == .income ? "新增收入" : "新增支出")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
-                }
+                ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
                         if type == .income {
@@ -352,6 +335,7 @@ struct AddMiscView: View {
                         dismiss()
                     }
                     .disabled(item.isEmpty || amount == 0)
+                    .foregroundColor(.themeAccent)
                 }
             }
         }
