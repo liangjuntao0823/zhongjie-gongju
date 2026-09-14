@@ -149,10 +149,9 @@ struct RentCollectionView: View {
 
     // MARK: - 导出PDF
     private func exportToPDF() {
-        let pdfData = NSMutableData()
         let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 595, height: 842))
 
-        renderer.writePDF(to: pdfData) { context in
+        let pdfData = renderer.pdfData() { context in
             let cgContext = context.cgContext
             cgContext.setFillColor(UIColor.black.cgColor)
 
@@ -196,7 +195,7 @@ struct RentCollectionView: View {
         }
 
         let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("收租记录-\(Int(Date().timeIntervalSince1970)).pdf")
-        pdfData.write(to: fileURL, atomically: true)
+        try? pdfData.write(to: fileURL)
         exportURL = ExportURL(url: fileURL)
     }
 

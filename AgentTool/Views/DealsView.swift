@@ -202,13 +202,12 @@ struct DealsView: View {
 
     // MARK: - 导出PDF
     private func exportToPDF() {
-        let pdfData = NSMutableData()
         let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 595, height: 842), format: UIGraphicsPDFRendererFormat())
 
         let title = selectedTab == 0 ? "成交记录" : (selectedTab == 1 ? "杂项收入" : "杂项支出")
         let records = selectedTab == 0 ? filteredDeals.count : (selectedTab == 1 ? filteredIncomes.count : filteredExpenses.count)
 
-        renderer.writePDF(to: pdfData) { context in
+        let pdfData = renderer.pdfData() { context in
             let cgContext = context.cgContext
             cgContext.setFillColor(UIColor.black.cgColor)
 
@@ -295,7 +294,7 @@ struct DealsView: View {
 
         let tempDir = FileManager.default.temporaryDirectory
         let fileURL = tempDir.appendingPathComponent("\(title)-\(Int(Date().timeIntervalSince1970)).pdf")
-        pdfData.write(to: fileURL, atomically: true)
+        try? pdfData.write(to: fileURL)
         exportURL = ExportURL(url: fileURL)
     }
 

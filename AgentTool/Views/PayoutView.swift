@@ -69,9 +69,8 @@ struct PayoutView: View {
     }
 
     private func exportToPDF() {
-        let pdfData = NSMutableData()
         let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 595, height: 842))
-        renderer.writePDF(to: pdfData) { context in
+        let pdfData = renderer.pdfData() { context in
             let cg = context.cgContext
             cg.setFillColor(UIColor.black.cgColor)
             ("包租打租记录" as NSString).draw(at: CGPoint(x: 40, y: 40), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 18)])
@@ -101,7 +100,7 @@ struct PayoutView: View {
             ("共 \(payouts.count) 条记录" as NSString).draw(at: CGPoint(x: 40, y: 810), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 11)])
         }
         let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("打租记录-\(Int(Date().timeIntervalSince1970)).pdf")
-        pdfData.write(to: fileURL, atomically: true)
+        try? pdfData.write(to: fileURL)
         exportURL = ExportURL(url: fileURL)
     }
 
@@ -125,8 +124,8 @@ struct PayoutView: View {
                 roomNumber: cols[0], manager: cols[1], unitType: cols[2],
                 leaseStartDate: df.date(from: cols[3]) ?? Date(),
                 leaseEndDate: df.date(from: cols[4]) ?? Date(),
-                annualRent: Double(cols[5]) ?? 0,
                 rentFreeDays: cols.count > 6 ? Int(cols[6]) ?? 0 : 0,
+                annualRent: Double(cols[5]) ?? 0,
                 paymentMethod: cols.count > 7 ? cols[7] : "月付",
                 notes: cols.count > 8 ? cols[8] : ""
             )
