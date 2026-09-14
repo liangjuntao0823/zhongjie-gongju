@@ -49,6 +49,8 @@ struct AgentToolApp: App {
         WindowGroup {
             MainTabView()
                 .tint(.themeAccent)
+                .environment(\.locale, Locale(identifier: "zh_CN"))
+                .environment(\.calendar, Calendar(identifier: .gregorian))
         }
         .modelContainer(container)
     }
