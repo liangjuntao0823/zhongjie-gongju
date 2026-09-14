@@ -17,7 +17,7 @@ struct DealsView: View {
     @State private var editingExpense: MiscExpense?
     @State private var showImportExport = false
     @State private var showFileImporter = false
-    @State private var exportURL: URL?
+    @State private var exportURL: ExportURL?
 
     private let availableYears = [2024, 2025, 2026, 2027, 2028]
 
@@ -194,8 +194,8 @@ struct DealsView: View {
                     importFromCSV(url: url)
                 }
             }
-            .sheet(item: $exportURL) { url in
-                ShareSheet(activityItems: [url])
+            .sheet(item: $exportURL) { export in
+                ShareSheet(activityItems: [export.url])
             }
         }
     }
