@@ -137,8 +137,8 @@ struct RentCollectionView: View {
             .sheet(isPresented: $showingAddProperty) { AddPropertyView() }
             .sheet(item: $selectedProperty) { prop in PropertyDetailView(property: prop) }
             .sheet(isPresented: $showUtility) { NavigationStack { UtilityView() } }
-            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item]) { result in
-                if case .success(let url) = result {
+            .sheet(isPresented: $showFileImporter) {
+                DocumentPicker { url in
                     importFromFile(url: url)
                 }
             }

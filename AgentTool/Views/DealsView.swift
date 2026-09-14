@@ -178,8 +178,8 @@ struct DealsView: View {
             .sheet(item: $editingExpense) { exp in
                 EditMiscView(item: .expense(exp))
             }
-            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item]) { result in
-                if case .success(let url) = result {
+            .sheet(isPresented: $showFileImporter) {
+                DocumentPicker { url in
                     importFromFile(url: url)
                 }
             }

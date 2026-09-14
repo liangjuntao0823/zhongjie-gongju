@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D694F0CEBE0546D8AA78CF6D /* zh_CN.lproj in Resources */ = {isa = PBXBuildFile; fileRef = CA28D6026BAA418489E864DA /* zh_CN.lproj */; };
 		A10000010000000000000001 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000001 /* App.swift */; };
 		A10000010000000000000002 /* Property.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000002 /* Property.swift */; };
 		A10000010000000000000003 /* DealRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000003 /* DealRecord.swift */; };
@@ -24,6 +25,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		CA28D6026BAA418489E864DA /* zh_CN.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder.lproj; path = zh_CN.lproj; sourceTree = "<group>"; };
 		B10000010000000000000001 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		B10000010000000000000002 /* Property.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Property.swift; sourceTree = "<group>"; };
 		B10000010000000000000003 /* DealRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DealRecord.swift; sourceTree = "<group>"; };
@@ -158,7 +160,7 @@
 			};
 			buildConfigurationList = F10000010000000000000001 /* Build configuration list for PBXProject "AgentTool" */;
 			compatibilityVersion = "Xcode 14.0";
-			developmentRegion = en;
+			developmentRegion = zh_CN;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
@@ -181,6 +183,7 @@
 			files = (
 				A10000010000000000000013 /* Preview Assets.xcassets in Resources */,
 				A10000010000000000000012 /* Assets.xcassets in Resources */,
+				D694F0CEBE0546D8AA78CF6D /* zh_CN.lproj in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -263,13 +266,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_ASSET_PATHS = "\"AgentTool/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDevelopmentRegion = "zh_CN";
 				INFOPLIST_KEY_CFBundleDisplayName = "中介管家";
-				INFOPLIST_KEY_CFBundleShortVersionString = "2.7";
+				INFOPLIST_KEY_CFBundleShortVersionString = "2.8";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -278,7 +281,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.7;
+				MARKETING_VERSION = 2.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.agent.tool;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -292,13 +295,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_ASSET_PATHS = "\"AgentTool/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDevelopmentRegion = "zh_CN";
 				INFOPLIST_KEY_CFBundleDisplayName = "中介管家";
-				INFOPLIST_KEY_CFBundleShortVersionString = "2.7";
+				INFOPLIST_KEY_CFBundleShortVersionString = "2.8";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -307,7 +310,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.7;
+				MARKETING_VERSION = 2.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.agent.tool;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

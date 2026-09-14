@@ -1,0 +1,14 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="UTF-8">
+<style>
+table { border-collapse: collapse; }
+td, th { border: 1px solid #999; padding: 4px 8px; font-family: Arial; font-size: 12px; mso-number-format:'\@'; white-space: nowrap; }
+th { background-color: #143B34; color: white; font-weight: bold; }
+tr:nth-child(even) td { background-color: #F5F7F5; }
+</style>
+</head>
+<body>
+<table><tr><th>成交日期</th><th>房号</th><th>房东</th><th>户型</th><th>起租期</th><th>到期日</th><th>租期</th><th>月租金</th><th>押金</th><th>预存</th><th>交租日</th><th>房东中介费</th><th>租客中介费</th><th>管理人</th><th>客源</th><th>备注</th></tr>
+<tr><td>2026-09-15</td><td>1</td><td>1</td><td>复式</td><td>2026-09-15</td><td>2027-09-15</td><td>1年</td><td>1400</td><td>1400</td><td>300</td><td>16</td><td>500</td><td>500</td><td>涛</td><td>平台</td><td>推了宽带</td></tr>
+</table></body></html>

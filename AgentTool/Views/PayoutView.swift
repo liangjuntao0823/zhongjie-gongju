@@ -60,8 +60,8 @@ struct PayoutView: View {
             }
             .sheet(isPresented: $showingAddPayout) { AddPayoutView() }
             .sheet(item: $selectedPayout) { payout in PayoutDetailView(payout: payout) }
-            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item]) { result in
-                if case .success(let url) = result { importFromFile(url: url) }
+            .sheet(isPresented: $showFileImporter) {
+                DocumentPicker { url in importFromFile(url: url) }
             }
             .sheet(item: $exportURL) { url in ShareSheet(activityItems: [url.url]) }
         }
