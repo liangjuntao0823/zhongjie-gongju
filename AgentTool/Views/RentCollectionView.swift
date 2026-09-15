@@ -12,6 +12,7 @@ struct RentCollectionView: View {
     @State private var selectedDueDay: Int? = nil
     @State private var showUtility = false
     @State private var exportURL: ExportURL?
+    @State private var showingRestore = false
     @State private var refreshID = UUID()
 
     // 只显示已登记的交租日期
@@ -124,11 +125,9 @@ struct RentCollectionView: View {
                             Label("导出Excel模板", systemImage: "doc.text")
                         }
                         Button {
-                            presentDocumentPicker { url in
-                                importFromFile(url: url)
-                            }
+                            showingRestore = true
                         } label: {
-                            Label("导入数据", systemImage: "square.and.arrow.down")
+                            Label("恢复数据", systemImage: "square.and.arrow.down")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -152,6 +151,11 @@ struct RentCollectionView: View {
             .sheet(isPresented: $showUtility) { NavigationStack { UtilityView() } }
             .sheet(item: $exportURL) { url in
                 ShareSheet(activityItems: [url.url])
+            }
+            .sheet(isPresented: $showingRestore) {
+                RestoreBackupView(type: .properties) { success in
+                    showingRestore = false
+                }
             }
         }
     }

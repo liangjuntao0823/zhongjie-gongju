@@ -517,3 +517,126 @@ struct SwipeActionRow<Content: View>: View {
         .clipped()
     }
 }
+
+// MARK: - 恢复数据视图
+struct RestoreBackupView: View {
+    let type: DataBackupManager.BackupType
+    var onComplete: ((Bool) -> Void)?
+
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @State private var backupFiles: [URL] = []
+    @State private var isRestoring = false
+    @State private var restoreMessage = ""
+
+    private let backupManager = DataBackupManager.shared
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.themeBg.ignoresSafeArea()
+                VStack {
+                    if isRestoring {
+                        ProgressView(restoreMessage)
+                            .padding()
+                    } else if backupFiles.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "folder.badge.questionmark")
+                                .font(.system(size: 48))
+                                .foregroundColor(.themeText3)
+                            Text("暂无备份文件")
+                                .foregroundColor(.themeText2)
+                            Text("请先在设置中导出备份")
+                                .font(.system(size: 13))
+                                .foregroundColor(.themeText3)
+                        }
+                        .padding(.top, 80)
+                    } else {
+                        List {
+                            ForEach(backupFiles, id: \.self) { url in
+                                Button {
+                                    restoreFromFile(url)
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "doc.text")
+                                            .foregroundColor(.themeAccent)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(url.deletingPathExtension().lastPathComponent)
+                                                .foregroundColor(.themeText)
+                                                .lineLimit(1)
+                                            Text(fileDate(url))
+                                                .font(.system(size: 12))
+                                                .foregroundColor(.themeText3)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .foregroundColor(.themeText3)
+                                    }
+                                    .padding(.vertical, 4)
+                                }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        deleteBackup(url)
+                                    } label: {
+                                        Label("删除", systemImage: "trash")
+                                    }
+                                }
+                            }
+                        }
+                        .listStyle(.plain)
+                    }
+                }
+            }
+            .navigationTitle("恢复\(type.rawValue)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("关闭") { dismiss() }
+                        .foregroundColor(.themeAccent)
+                }
+            }
+            .onAppear { loadBackups() }
+        }
+    }
+
+    private func loadBackups() {
+        backupFiles = backupManager.listBackups(in: type)
+    }
+
+    private func fileDate(_ url: URL) -> String {
+        if let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+           let date = attrs[.modificationDate] as? Date {
+            let df = DateFormatter()
+            df.locale = Locale(identifier: "zh_CN")
+            df.dateFormat = "yyyy-MM-dd HH:mm"
+            return df.string(from: date)
+        }
+        return ""
+    }
+
+    private func restoreFromFile(_ url: URL) {
+        guard let data = try? Data(contentsOf: url) else { return }
+        isRestoring = true
+        restoreMessage = "正在恢复数据..."
+
+        backupManager.importAllData(from: data, modelContext: modelContext) { success in
+            DispatchQueue.main.async {
+                isRestoring = false
+                if success {
+                    restoreMessage = "恢复成功！"
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        dismiss()
+                        onComplete?(true)
+                    }
+                } else {
+                    restoreMessage = "恢复失败，请重试"
+                }
+            }
+        }
+    }
+
+    private func deleteBackup(_ url: URL) {
+        backupManager.deleteBackup(url)
+        loadBackups()
+    }
+}

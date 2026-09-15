@@ -308,6 +308,135 @@ class DataBackupManager {
         }
         importAllData(from: data, modelContext: modelContext, completion: completion)
     }
+
+    // MARK: - 分板块导出
+    enum BackupType: String {
+        case deals = "成交备份"
+        case properties = "收租备份"
+        case payouts = "包租备份"
+        case total = "总备份"
+    }
+
+    func exportDeals(modelContext: ModelContext) -> Data? {
+        let deals = (try? modelContext.fetch(FetchDescriptor<DealRecord>())) ?? []
+        let incomes = (try? modelContext.fetch(FetchDescriptor<MiscIncome>())) ?? []
+        let expenses = (try? modelContext.fetch(FetchDescriptor<MiscExpense>())) ?? []
+        var dict: [String: Any] = [:]
+        dict["deals"] = deals.map { deal in
+            ["date": isoFormatter.string(from: deal.date), "roomNumber": deal.roomNumber, "landlord": deal.landlord, "unitType": deal.unitType, "leaseStart": isoFormatter.string(from: deal.leaseStart), "leaseEnd": isoFormatter.string(from: deal.leaseEnd), "leaseDuration": deal.leaseDuration, "rent": deal.rent, "deposit": deal.deposit, "prepayment": deal.prepayment, "rentDueDay": deal.rentDueDay as Any, "agentFeeLandlord": deal.agentFeeLandlord, "agentFeeTenant": deal.agentFeeTenant, "totalFee": deal.totalFee, "manager": deal.manager, "source": deal.source, "notes": deal.notes]
+        }
+        dict["incomes"] = incomes.map { ["date": isoFormatter.string(from: $0.date), "item": $0.item, "amount": $0.amount, "notes": $0.notes] }
+        dict["expenses"] = expenses.map { ["date": isoFormatter.string(from: $0.date), "item": $0.item, "amount": $0.amount, "notes": $0.notes] }
+        dict["properties"] = []
+        dict["payouts"] = []
+        return try? JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
+    }
+
+    func exportProperties(modelContext: ModelContext) -> Data? {
+        let properties = (try? modelContext.fetch(FetchDescriptor<Property>())) ?? []
+        var dict: [String: Any] = [:]
+        dict["deals"] = []
+        dict["incomes"] = []
+        dict["expenses"] = []
+        dict["properties"] = properties.map { prop in
+            ["roomNumber": prop.roomNumber, "landlord": prop.landlord, "unitType": prop.unitType, "rent": prop.rent, "deposit": prop.deposit, "prepayment": prop.prepayment, "leaseStart": prop.leaseStart, "leaseEnd": prop.leaseEnd, "leaseDuration": prop.leaseDuration, "rentDueDay": prop.rentDueDay, "waterMeterBase": prop.waterMeterBase, "electricMeterBase": prop.electricMeterBase, "propertyType": prop.propertyType, "notes": prop.notes, "monthlyRentRecords": prop.monthlyRentRecords.map { ["month": $0.month, "amount": $0.amount, "isPaid": $0.isPaid] }, "quarterlyUtilityRecords": prop.quarterlyUtilityRecords.map { ["quarter": $0.quarter, "electricAmount": $0.electricAmount, "waterAmount": $0.waterAmount, "isSettled": $0.isSettled] }]
+        }
+        dict["payouts"] = []
+        return try? JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
+    }
+
+    func exportPayouts(modelContext: ModelContext) -> Data? {
+        let payouts = (try? modelContext.fetch(FetchDescriptor<PayoutRecord>())) ?? []
+        var dict: [String: Any] = [:]
+        dict["deals"] = []
+        dict["incomes"] = []
+        dict["expenses"] = []
+        dict["properties"] = []
+        dict["payouts"] = payouts.map { p in
+            ["roomNumber": p.roomNumber, "manager": p.manager, "unitType": p.unitType, "leaseStartDate": isoFormatter.string(from: p.leaseStartDate), "leaseEndDate": isoFormatter.string(from: p.leaseEndDate), "leaseDuration": p.leaseDuration, "rentFreeDays": p.rentFreeDays, "annualRent": p.annualRent, "deposit": p.deposit, "waterMeterBase": p.waterMeterBase, "paymentMethod": p.paymentMethod, "notes": p.notes, "monthlyPayouts": p.monthlyPayouts.map { ["month": $0.month, "amount": $0.amount, "isPaid": $0.isPaid] }]
+        }
+        return try? JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
+    }
+
+    // MARK: - 分板块清空
+    func clearDeals(modelContext: ModelContext) {
+        if let items = try? modelContext.fetch(FetchDescriptor<DealRecord>()) {
+            for item in items { modelContext.delete(item) }
+        }
+        if let items = try? modelContext.fetch(FetchDescriptor<MiscIncome>()) {
+            for item in items { modelContext.delete(item) }
+        }
+        if let items = try? modelContext.fetch(FetchDescriptor<MiscExpense>()) {
+            for item in items { modelContext.delete(item) }
+        }
+        try? modelContext.save()
+    }
+
+    func clearProperties(modelContext: ModelContext) {
+        if let items = try? modelContext.fetch(FetchDescriptor<Property>()) {
+            for item in items { modelContext.delete(item) }
+        }
+        if let items = try? modelContext.fetch(FetchDescriptor<RentMonthRecord>()) {
+            for item in items { modelContext.delete(item) }
+        }
+        if let items = try? modelContext.fetch(FetchDescriptor<UtilityQuarterRecord>()) {
+            for item in items { modelContext.delete(item) }
+        }
+        try? modelContext.save()
+    }
+
+    func clearPayouts(modelContext: ModelContext) {
+        if let items = try? modelContext.fetch(FetchDescriptor<PayoutRecord>()) {
+            for item in items { modelContext.delete(item) }
+        }
+        if let items = try? modelContext.fetch(FetchDescriptor<PayoutMonthRecord>()) {
+            for item in items { modelContext.delete(item) }
+        }
+        try? modelContext.save()
+    }
+
+    func clearAll(modelContext: ModelContext) {
+        clearDeals(modelContext: modelContext)
+        clearProperties(modelContext: modelContext)
+        clearPayouts(modelContext: modelContext)
+    }
+
+    // MARK: - 备份文件管理
+    func backupFolderURL(for type: BackupType) -> URL {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        return docs.appendingPathComponent(type.rawValue, isDirectory: true)
+    }
+
+    func listBackups(in type: BackupType) -> [URL] {
+        let folder = backupFolderURL(for: type)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        return files.filter { $0.pathExtension == "json" }.sorted { $0.lastPathComponent > $1.lastPathComponent }
+    }
+
+    func saveBackup(_ data: Data, type: BackupType, name: String? = nil) -> URL? {
+        let folder = backupFolderURL(for: type)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let fileName = name ?? "\(type.rawValue)-\(timestampString()).json"
+        let url = folder.appendingPathComponent(fileName)
+        do {
+            try data.write(to: url)
+            return url
+        } catch {
+            print("保存备份失败: \(error)")
+            return nil
+        }
+    }
+
+    func deleteBackup(_ url: URL) {
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    private func timestampString() -> String {
+        let df = DateFormatter()
+        df.dateFormat = "yyyyMMdd-HHmm"
+        return df.string(from: Date())
+    }
 }
 
 // 自动备份设置

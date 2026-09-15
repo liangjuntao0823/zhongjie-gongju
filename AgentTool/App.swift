@@ -149,13 +149,19 @@ struct MainTabView: View {
             return
         }
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let backupFolder = docs.appendingPathComponent("Backups", isDirectory: true)
-        try? FileManager.default.createDirectory(at: backupFolder, withIntermediateDirectories: true)
-        let destURL = backupFolder.appendingPathComponent("初始数据备份.json")
+        // 创建4个备份文件夹
+        let folders = ["成交备份", "收租备份", "包租备份", "总备份"]
+        for folder in folders {
+            let folderURL = docs.appendingPathComponent(folder, isDirectory: true)
+            try? FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
+        }
+        // 预置备份放到总备份文件夹
+        let totalFolder = docs.appendingPathComponent("总备份", isDirectory: true)
+        let destURL = totalFolder.appendingPathComponent("总备份-初始数据.json")
         if !FileManager.default.fileExists(atPath: destURL.path) {
             do {
                 try FileManager.default.copyItem(at: sourceURL, to: destURL)
-                print("预置备份已复制到Backups文件夹")
+                print("预置备份已复制到总备份文件夹")
             } catch {
                 print("复制预置备份失败: \(error)")
             }

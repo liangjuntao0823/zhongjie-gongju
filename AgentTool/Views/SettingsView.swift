@@ -1,22 +1,21 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var showMessage = ""
     @State private var showAlert = false
-    @State private var showClearConfirm = false
+    @State private var showClearSheet = false
     @State private var showRestoreList = false
+    @State private var showExcelConvert = false
     @State private var autoBackupEnabled = false
     @State private var backupFrequency = "day"
     @State private var backupHour = 23
+    @State private var clearType: DataBackupManager.BackupType? = nil
+    @State private var showClearConfirm = false
 
-    private let backupFolder: URL = {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let folder = docs.appendingPathComponent("Backups", isDirectory: true)
-        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        return folder
-    }()
+    private let backupManager = DataBackupManager.shared
 
     var body: some View {
         NavigationStack {
@@ -53,7 +52,22 @@ struct SettingsView: View {
                     }
 
                     Button {
-                        showClearConfirm = true
+                        showExcelConvert = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.right.doc.on.clipboard")
+                                .foregroundColor(.themeAccent)
+                                .frame(width: 24)
+                            Text("Excel转备份")
+                                .foregroundColor(.themeText)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.themeText3)
+                        }
+                    }
+
+                    Button {
+                        showClearSheet = true
                     } label: {
                         HStack {
                             Image(systemName: "trash.fill")
@@ -89,6 +103,10 @@ struct SettingsView: View {
                             }
                         }
                         .onChange(of: backupHour) { _, _ in saveAutoSettings() }
+
+                        Text("自动备份将保存到总备份文件夹")
+                            .font(.footnote)
+                            .foregroundColor(.themeText3)
                     }
                 }
 
@@ -101,7 +119,7 @@ struct SettingsView: View {
                     HStack {
                         Text("版本")
                         Spacer()
-                        Text("2.14").foregroundColor(.themeText2)
+                        Text("2.19").foregroundColor(.themeText2)
                     }
                 }
 
@@ -123,76 +141,67 @@ struct SettingsView: View {
             } message: {
                 Text(showMessage)
             }
-            .alert("确认清空", isPresented: $showClearConfirm) {
+            .confirmationDialog("选择要清空的板块", isPresented: $showClearSheet, titleVisibility: .visible) {
+                Button("清空成交数据") { clearType = .deals; showClearConfirm = true }
+                Button("清空收租数据") { clearType = .properties; showClearConfirm = true }
+                Button("清空包租数据") { clearType = .payouts; showClearConfirm = true }
+                Button("清空全部数据", role: .destructive) { clearType = .total; showClearConfirm = true }
                 Button("取消", role: .cancel) { }
-                Button("确定清空", role: .destructive) { clearData() }
+            }
+            .alert("确认清空", isPresented: $showClearConfirm) {
+                Button("取消", role: .cancel) { clearType = nil }
+                Button("确定清空", role: .destructive) {
+                    if let type = clearType {
+                        clearData(type: type)
+                    }
+                    clearType = nil
+                }
             } message: {
-                Text("确定要清空所有数据吗？此操作不可恢复，建议先备份数据。")
+                if let type = clearType {
+                    Text(type == .total ? "确定要清空所有数据吗？此操作不可恢复，建议先备份数据。" : "确定要清空\(type.rawValue)吗？此操作不可恢复。")
+                } else {
+                    Text("")
+                }
             }
             .sheet(isPresented: $showRestoreList) {
-                RestoreBackupView(folder: backupFolder) { url in
-                    restoreData(from: url)
+                RestoreBackupView(type: .total) { success in
+                    showRestoreList = false
                 }
+            }
+            .sheet(isPresented: $showExcelConvert) {
+                ExcelConvertView()
             }
         }
     }
 
-    // 备份数据 - 文件名格式 20260915-1853
+    // 备份数据 - 保存到总备份文件夹
     private func backupData() {
-        guard let data = DataBackupManager.shared.exportAllData(modelContext: modelContext) else {
+        guard let data = backupManager.exportAllData(modelContext: modelContext) else {
             showMessage = "备份失败"
             showAlert = true
             return
         }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyyMMdd-HHmm"
-        let filename = "\(formatter.string(from: Date())).json"
-        let fileURL = backupFolder.appendingPathComponent(filename)
-        do {
-            try data.write(to: fileURL)
-            showMessage = "备份成功：\(filename)"
-            showAlert = true
-        } catch {
-            showMessage = "备份失败：\(error.localizedDescription)"
-            showAlert = true
+        if let url = backupManager.saveBackup(data, type: .total) {
+            showMessage = "备份成功：\(url.lastPathComponent)"
+        } else {
+            showMessage = "备份失败"
         }
-    }
-
-    // 恢复数据
-    private func restoreData(from url: URL) {
-        guard let data = try? Data(contentsOf: url) else {
-            showMessage = "读取备份文件失败"
-            showAlert = true
-            return
-        }
-        DataBackupManager.shared.importAllData(from: data, modelContext: modelContext) { success in
-            DispatchQueue.main.async {
-                showMessage = success ? "数据恢复成功" : "数据恢复失败"
-                showAlert = true
-            }
-        }
+        showAlert = true
     }
 
     // 清空数据
-    private func clearData() {
-        if let deals = try? modelContext.fetch(FetchDescriptor<DealRecord>()) {
-            for item in deals { modelContext.delete(item) }
+    private func clearData(type: DataBackupManager.BackupType) {
+        switch type {
+        case .deals:
+            backupManager.clearDeals(modelContext: modelContext)
+        case .properties:
+            backupManager.clearProperties(modelContext: modelContext)
+        case .payouts:
+            backupManager.clearPayouts(modelContext: modelContext)
+        case .total:
+            backupManager.clearAll(modelContext: modelContext)
         }
-        if let incomes = try? modelContext.fetch(FetchDescriptor<MiscIncome>()) {
-            for item in incomes { modelContext.delete(item) }
-        }
-        if let expenses = try? modelContext.fetch(FetchDescriptor<MiscExpense>()) {
-            for item in expenses { modelContext.delete(item) }
-        }
-        if let properties = try? modelContext.fetch(FetchDescriptor<Property>()) {
-            for item in properties { modelContext.delete(item) }
-        }
-        if let payouts = try? modelContext.fetch(FetchDescriptor<PayoutRecord>()) {
-            for item in payouts { modelContext.delete(item) }
-        }
-        try? modelContext.save()
-        UserDefaults.standard.removeObject(forKey: "initialDataImported")
-        showMessage = "数据已清空"
+        showMessage = "\(type.rawValue)已清空"
         showAlert = true
     }
 
@@ -213,72 +222,167 @@ struct SettingsView: View {
     }
 }
 
-// 恢复备份列表视图
-struct RestoreBackupView: View {
-    let folder: URL
-    let onSelect: (URL) -> Void
-    @State private var files: [URL] = []
+// MARK: - Excel转备份视图
+struct ExcelConvertView: View {
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @State private var showFilePicker = false
+    @State private var isConverting = false
+    @State private var convertMessage = ""
+    @State private var convertedData: Data? = nil
+    @State private var showSaveSheet = false
+    @State private var selectedFileName = ""
+
+    private let backupManager = DataBackupManager.shared
 
     var body: some View {
         NavigationStack {
-            List {
-                if files.isEmpty {
-                    Text("暂无备份文件")
-                        .foregroundColor(.themeText3)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                } else {
-                    ForEach(files, id: \.self) { url in
-                        Button {
-                            onSelect(url)
-                            dismiss()
-                        } label: {
-                            HStack {
-                                Image(systemName: "doc.fill")
-                                    .foregroundColor(.themeAccent)
-                                Text(url.deletingPathExtension().lastPathComponent)
-                                    .foregroundColor(.themeText)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.themeText3)
+            ZStack {
+                Color.themeBg.ignoresSafeArea()
+                VStack(spacing: 20) {
+                    if isConverting {
+                        ProgressView("正在转换Excel...")
+                    } else if let data = convertedData {
+                        VStack(spacing: 16) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 48))
+                                .foregroundColor(.themeAccent)
+                            Text("转换成功！")
+                                .font(.title2)
+                                .foregroundColor(.themeText)
+                            Text("文件：\(selectedFileName)")
+                                .font(.subheadline)
+                                .foregroundColor(.themeText2)
+                            Text("请选择保存到哪个备份文件夹")
+                                .font(.subheadline)
+                                .foregroundColor(.themeText3)
+
+                            VStack(spacing: 12) {
+                                Button {
+                                    saveBackup(data, type: .deals)
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "doc.text")
+                                        Text("保存到成交备份")
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                    }
+                                    .padding()
+                                    .background(Color.themePanel)
+                                    .cornerRadius(10)
+                                }
+                                Button {
+                                    saveBackup(data, type: .properties)
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "doc.text")
+                                        Text("保存到收租备份")
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                    }
+                                    .padding()
+                                    .background(Color.themePanel)
+                                    .cornerRadius(10)
+                                }
+                                Button {
+                                    saveBackup(data, type: .payouts)
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "doc.text")
+                                        Text("保存到包租备份")
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                    }
+                                    .padding()
+                                    .background(Color.themePanel)
+                                    .cornerRadius(10)
+                                }
+                                Button {
+                                    saveBackup(data, type: .total)
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "doc.text")
+                                        Text("保存到总备份")
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                    }
+                                    .padding()
+                                    .background(Color.themePanel)
+                                    .cornerRadius(10)
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+                    } else {
+                        VStack(spacing: 16) {
+                            Image(systemName: "tablecells")
+                                .font(.system(size: 48))
+                                .foregroundColor(.themeText3)
+                            Text("选择Excel文件转换为备份")
+                                .font(.title3)
+                                .foregroundColor(.themeText)
+                            Text("支持.xlsx格式，转换后可选择保存到对应备份文件夹")
+                                .font(.subheadline)
+                                .foregroundColor(.themeText3)
+                                .multilineTextAlignment(.center)
+                            Button {
+                                showFilePicker = true
+                            } label: {
+                                HStack {
+                                    Image(systemName: "folder")
+                                    Text("选择Excel文件")
+                                }
+                                .padding()
+                                .background(Color.themeAccent)
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
                             }
                         }
+                        .padding(.horizontal, 40)
                     }
-                    .onDelete(perform: deleteFile)
                 }
             }
-            .navigationTitle("选择备份")
+            .navigationTitle("Excel转备份")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("取消") { dismiss() }
-                }
-                ToolbarItem(placement: .topBarLeading) {
-                    EditButton()
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("关闭") { dismiss() }
+                        .foregroundColor(.themeAccent)
                 }
             }
-            .onAppear {
-                loadFiles()
+            .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.spreadsheet, .xlsx]) { result in
+                switch result {
+                case .success(let url):
+                    convertExcel(url)
+                case .failure:
+                    convertMessage = "选择文件失败"
+                }
             }
         }
     }
 
-    private func deleteFile(at offsets: IndexSet) {
-        for index in offsets {
-            let url = files[index]
-            try? FileManager.default.removeItem(at: url)
+    private func convertExcel(_ url: URL) {
+        selectedFileName = url.lastPathComponent
+        isConverting = true
+        convertMessage = ""
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            // 简化版：直接读取文件内容，后续可集成CoreXLSX
+            // 目前先提示用户使用桌面转换工具
+            DispatchQueue.main.async {
+                isConverting = false
+                convertMessage = "请使用桌面端的转换工具将Excel转为JSON后，通过文件APP放入对应备份文件夹"
+                convertedData = nil
+            }
         }
-        loadFiles()
     }
 
-    private func loadFiles() {
-        do {
-            let allFiles = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.creationDateKey], options: [.skipsHiddenFiles])
-            files = allFiles.filter { $0.pathExtension == "json" }.sorted {
-                $0.lastPathComponent > $1.lastPathComponent
-            }
-        } catch {
-            files = []
+    private func saveBackup(_ data: Data, type: DataBackupManager.BackupType) {
+        if let url = backupManager.saveBackup(data, type: type) {
+            convertMessage = "已保存到\(type.rawValue)：\(url.lastPathComponent)"
+            dismiss()
+        } else {
+            convertMessage = "保存失败"
         }
     }
 }

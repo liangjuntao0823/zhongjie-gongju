@@ -17,6 +17,7 @@ struct DealsView: View {
     @State private var editingExpense: MiscExpense?
     @State private var showImportExport = false
     @State private var exportURL: ExportURL?
+    @State private var showingRestore = false
 
     private let availableYears = [2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035]
 
@@ -144,11 +145,9 @@ struct DealsView: View {
                             Label("导出Excel模板", systemImage: "doc.text")
                         }
                         Button {
-                            presentDocumentPicker { url in
-                                importFromFile(url: url)
-                            }
+                            showingRestore = true
                         } label: {
-                            Label("导入数据", systemImage: "square.and.arrow.down")
+                            Label("恢复数据", systemImage: "square.and.arrow.down")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -181,6 +180,11 @@ struct DealsView: View {
             }
             .sheet(item: $exportURL) { export in
                 ShareSheet(activityItems: [export.url])
+            }
+            .sheet(isPresented: $showingRestore) {
+                RestoreBackupView(type: .deals) { success in
+                    showingRestore = false
+                }
             }
         }
     }

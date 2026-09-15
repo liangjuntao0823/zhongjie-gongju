@@ -9,6 +9,7 @@ struct PayoutView: View {
     @State private var editingPayout: PayoutRecord?
     @State private var selectedPayout: PayoutRecord?
     @State private var exportURL: ExportURL?
+    @State private var showingRestore = false
 
     var body: some View {
         NavigationStack {
@@ -53,8 +54,8 @@ struct PayoutView: View {
                         Button { exportTemplate() } label: {
                             Label("导出Excel模板", systemImage: "doc.text")
                         }
-                        Button { presentDocumentPicker { url in importFromFile(url: url) } } label: {
-                            Label("导入数据", systemImage: "square.and.arrow.down")
+                        Button { showingRestore = true } label: {
+                            Label("恢复数据", systemImage: "square.and.arrow.down")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle").foregroundColor(.themeAccent)
@@ -70,6 +71,11 @@ struct PayoutView: View {
             .sheet(item: $editingPayout) { payout in AddPayoutView(payout: payout) }
             .sheet(item: $selectedPayout) { payout in PayoutDetailView(payout: payout) }
             .sheet(item: $exportURL) { url in ShareSheet(activityItems: [url.url]) }
+            .sheet(isPresented: $showingRestore) {
+                RestoreBackupView(type: .payouts) { success in
+                    showingRestore = false
+                }
+            }
         }
     }
 
