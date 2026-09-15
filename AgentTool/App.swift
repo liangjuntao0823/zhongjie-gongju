@@ -55,6 +55,7 @@ struct AgentToolApp: App {
 
 struct MainTabView: View {
     @EnvironmentObject private var tabRouter: TabRouter
+    @Environment(\.modelContext) private var modelContext
 
     init() {
         let appearance = UITabBarAppearance()
@@ -95,7 +96,22 @@ struct MainTabView: View {
             ProfitView()
                 .tabItem { Label("汇总", systemImage: "chart.pie.fill") }
                 .tag(4)
+
+            SettingsView()
+                .tabItem { Label("设置", systemImage: "gearshape.fill") }
+                .tag(5)
         }
         .tint(.themeAccent)
+        .onAppear {
+            // 首次启动导入初始数据
+            if !UserDefaults.standard.bool(forKey: "initialDataImported") {
+                if DataBackupManager.shared.importInitialData(modelContext: modelContext) {
+                    UserDefaults.standard.set(true, forKey: "initialDataImported")
+                    print("初始数据导入成功")
+                } else {
+                    print("初始数据导入失败或文件不存在")
+                }
+            }
+        }
     }
 }

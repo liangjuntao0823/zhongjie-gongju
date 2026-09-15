@@ -24,8 +24,15 @@ struct ProfitView: View {
 
     private var monthlySummaries: [MonthlySummary] {
         let targetYear = selectedYear ?? calendar.component(.year, from: Date())
+        let targetMonth = selectedMonth
         var summaries: [MonthlySummary] = []
-        for month in 1...12 {
+        let monthsToShow: [Int]
+        if let m = targetMonth {
+            monthsToShow = [m]
+        } else {
+            monthsToShow = Array(1...12)
+        }
+        for month in monthsToShow {
             let monthDeals = deals.filter {
                 let m = calendar.component(.month, from: $0.date)
                 let y = calendar.component(.year, from: $0.date)
@@ -44,8 +51,7 @@ struct ProfitView: View {
             let agentFee = monthDeals.reduce(0) { $0 + $1.totalFee }
             let miscIncome = monthIncomes.reduce(0) { $0 + $1.amount }
             let miscExpense = monthExpenses.reduce(0) { $0 + $1.amount }
-            let currentMonth = selectedMonth ?? calendar.component(.month, from: Date())
-            if monthDeals.count > 0 || monthIncomes.count > 0 || monthExpenses.count > 0 || month == currentMonth {
+            if targetMonth != nil || monthDeals.count > 0 || monthIncomes.count > 0 || monthExpenses.count > 0 {
                 summaries.append(MonthlySummary(
                     month: month,
                     dealCount: monthDeals.count,
