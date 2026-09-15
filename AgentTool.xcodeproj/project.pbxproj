@@ -99,6 +99,7 @@
 			isa = PBXGroup;
 			children = (
 				B10000010000000000000005 /* DataManager.swift */,
+				B10000010000000000000096 /* DataBackupManager.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -111,6 +112,7 @@
 				B10000010000000000000008 /* RentCollectionView.swift */,
 				B10000010000000000000009 /* PayoutView.swift */,
 				B10000010000000000000010 /* ProfitView.swift */,
+				B10000010000000000000095 /* SettingsView.swift */,
 				B10000010000000000000011 /* UtilityView.swift */,
 				B10000010000000000000015 /* Theme.swift */,
 			);
@@ -205,6 +207,8 @@
 				A10000010000000000000008 /* RentCollectionView.swift in Sources */,
 				A10000010000000000000009 /* PayoutView.swift in Sources */,
 				A10000010000000000000010 /* ProfitView.swift in Sources */,
+				A10000010000000000000095 /* SettingsView.swift in Sources */,
+				A10000010000000000000096 /* DataBackupManager.swift in Sources */,
 				A10000010000000000000011 /* UtilityView.swift in Sources */,
 				A10000010000000000000015 /* Theme.swift in Sources */,
 			);
