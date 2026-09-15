@@ -14,14 +14,18 @@ final class PayoutRecord {
     var annualRent: Double
     var deposit: Double
     var waterMeterBase: Int
-    var paymentMethod: String // 月付, 季付
+    var electricMeterBase: Int
+    var rentDueDay: Int // 付款日 1-31
+    var paymentMethod: String // 月付, 季付, 半年付, 年付
     var monthlyPayouts: [PayoutMonthRecord]
+    var monthlyUtilityRecords: [PayoutUtilityRecord]
     var notes: String
 
     init(roomNumber: String = "", manager: String = "", unitType: String = "",
          leaseStartDate: Date = Date(), leaseEndDate: Date = Date(),
          leaseDuration: String = "", rentFreeDays: Int = 0, annualRent: Double = 0,
-         deposit: Double = 0, waterMeterBase: Int = 0, paymentMethod: String = "月付",
+         deposit: Double = 0, waterMeterBase: Int = 0, electricMeterBase: Int = 0,
+         rentDueDay: Int = 1, paymentMethod: String = "月付",
          notes: String = "") {
         self.id = UUID()
         self.roomNumber = roomNumber
@@ -34,8 +38,11 @@ final class PayoutRecord {
         self.annualRent = annualRent
         self.deposit = deposit
         self.waterMeterBase = waterMeterBase
+        self.electricMeterBase = electricMeterBase
+        self.rentDueDay = rentDueDay
         self.paymentMethod = paymentMethod
         self.monthlyPayouts = []
+        self.monthlyUtilityRecords = []
         self.notes = notes
     }
 }
@@ -54,6 +61,23 @@ final class PayoutMonthRecord {
         self.amount = amount
         self.isPaid = isPaid
         self.paidDate = nil
+    }
+}
+
+@Model
+final class PayoutUtilityRecord {
+    var id: UUID
+    var month: Int
+    var waterAmount: Double
+    var electricAmount: Double
+    var isSettled: Bool
+
+    init(month: Int, waterAmount: Double = 0, electricAmount: Double = 0, isSettled: Bool = false) {
+        self.id = UUID()
+        self.month = month
+        self.waterAmount = waterAmount
+        self.electricAmount = electricAmount
+        self.isSettled = isSettled
     }
 }
 

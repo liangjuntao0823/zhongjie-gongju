@@ -38,10 +38,20 @@ struct RentCollectionView: View {
             let bPaid = b.monthlyRentRecords.contains { $0.month == currentMonth && $0.isPaid }
             // 未收租的优先
             if aPaid != bPaid { return !aPaid && bPaid }
-            // 都未收租：离交租日近的排前面
+            // 都未收租：拖租的优先，拖得越久越靠前
             if !aPaid && !bPaid {
-                let aDays = a.rentDueDay >= currentDay ? a.rentDueDay - currentDay : a.rentDueDay + 30 - currentDay
-                let bDays = b.rentDueDay >= currentDay ? b.rentDueDay - currentDay : b.rentDueDay + 30 - currentDay
+                let aOverdue = a.rentDueDay < currentDay
+                let bOverdue = b.rentDueDay < currentDay
+                if aOverdue != bOverdue { return aOverdue && !bOverdue }
+                if aOverdue && bOverdue {
+                    // 都拖租：拖得越久越靠前
+                    let aDays = currentDay - a.rentDueDay
+                    let bDays = currentDay - b.rentDueDay
+                    return aDays > bDays
+                }
+                // 都未拖租：离交租日近的排前面
+                let aDays = a.rentDueDay - currentDay
+                let bDays = b.rentDueDay - currentDay
                 return aDays < bDays
             }
             // 都已收租：按房号排序
@@ -362,14 +372,14 @@ struct PropertyRentRow: View {
                 }
                 // 第二行：交租日 + 租金 + 预存
                 HStack(spacing: 6) {
-                    Text("\(property.rentDueDay)号交租")
+                    Text("\(property.rentDueDay)号")
                         .font(.system(size: 12))
                         .foregroundColor(.themeText2)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
                         .background(Color(hex: "FDF0F0"))
                         .cornerRadius(.infinity)
-                    Text("月租¥\(Int(property.rent))")
+                    Text("租/\(Int(property.rent))")
                         .font(.system(size: 12))
                         .foregroundColor(.themeText2)
                         .padding(.horizontal, 10)
@@ -377,7 +387,7 @@ struct PropertyRentRow: View {
                         .background(Color(hex: "FFF3E0"))
                         .cornerRadius(.infinity)
                     if property.prepayment > 0 {
-                        Text("预存¥\(Int(property.prepayment))")
+                        Text("预/\(Int(property.prepayment))")
                             .font(.system(size: 12))
                             .foregroundColor(.themeText2)
                             .padding(.horizontal, 10)
@@ -389,11 +399,11 @@ struct PropertyRentRow: View {
                 // 第三行：租期
                 HStack(spacing: 6) {
                     Text(property.leaseStart.isEmpty ? "未出租" : "\(property.leaseStart) 至 \(property.leaseEnd)")
-                        .font(.system(size: 10))
+                        .font(.system(size: 12))
                         .foregroundColor(property.leaseStart.isEmpty ? .themeAmber : .themeText3)
                     if !leaseYears.isEmpty {
                         Text(leaseYears)
-                            .font(.system(size: 10))
+                            .font(.system(size: 12))
                             .foregroundColor(.themeText3)
                     }
                 }
@@ -413,9 +423,17 @@ struct PropertyRentRow: View {
                         .font(.system(size: 10.5))
                         .foregroundColor(.themeText2)
                 }
-                Text("累计水电¥\(Int(totalUtility))")
-                    .font(.system(size: 10.5))
-                    .foregroundColor(.themeText2)
+                HStack(spacing: 0) {
+                    Text("累计收水电:")
+                        .font(.system(size: 10))
+                        .foregroundColor(.themeText2)
+                    Text("\(Int(totalUtility))")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.themeAccentDark)
+                    Text("元")
+                        .font(.system(size: 10))
+                        .foregroundColor(.themeText2)
+                }
                 let paid = property.monthlyRentRecords.contains { $0.month == currentMonth && $0.isPaid }
                 HStack(spacing: 4) {
                     Image(systemName: paid ? "checkmark.circle.fill" : "circle")
@@ -447,10 +465,17 @@ struct PropertyDetailView: View {
 
     private func generateShareImage() {
         let renderer = ImageRenderer(content: ShareDetailRenderView(property: property))
-        renderer.scale = UIScreen.main.scale
+        renderer.scale = 3.0
         if let image = renderer.uiImage {
             shareImage = image
             showShareSheet = true
+        } else {
+            // 备用方案：用更低scale重试
+            renderer.scale = 2.0
+            if let image = renderer.uiImage {
+                shareImage = image
+                showShareSheet = true
+            }
         }
     }
 

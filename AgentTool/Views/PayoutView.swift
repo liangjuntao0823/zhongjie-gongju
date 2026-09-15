@@ -209,16 +209,20 @@ struct PayoutView: View {
 struct PayoutRow: View {
     let payout: PayoutRecord
 
+    private var paidCount: Int {
+        payout.monthlyPayouts.filter { $0.isPaid }.count
+    }
+
+    private var paidAmount: Double {
+        payout.monthlyPayouts.filter { $0.isPaid }.reduce(0) { $0 + $1.amount }
+    }
+
+    private var paidUtility: Double {
+        payout.monthlyUtilityRecords.filter { $0.isSettled }.reduce(0) { $0 + $1.waterAmount + $1.electricAmount }
+    }
+
     var body: some View {
         HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(hex: "F0E8FE"))
-                    .frame(width: 44, height: 44)
-                Image(systemName: "arrow.up.circle.fill")
-                    .foregroundColor(Color(hex: "6B3FA0"))
-                    .font(.system(size: 18))
-            }
             VStack(alignment: .leading, spacing: 5) {
                 // 第一行：房号 + 户型 + 付款方式
                 HStack(spacing: 6) {
@@ -238,6 +242,8 @@ struct PayoutRow: View {
                         .padding(.vertical, 3)
                         .background(Color(hex: "E3F2FD"))
                         .cornerRadius(.infinity)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                     Text(payout.paymentMethod)
                         .font(.system(size: 10))
                         .padding(.horizontal, 8)
@@ -245,56 +251,94 @@ struct PayoutRow: View {
                         .background(Color(hex: "F0E8FE"))
                         .foregroundColor(Color(hex: "6B3FA0"))
                         .cornerRadius(.infinity)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
-                // 第二行：管理 + 年租金
+                // 第二行：付款日 + 年租
                 HStack(spacing: 6) {
-                    Text("管理：\(payout.manager)")
+                    Text("\(payout.rentDueDay)号")
                         .font(.system(size: 12))
                         .foregroundColor(.themeText2)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Color(hex: "E8F0FE"))
+                        .background(Color(hex: "FDF0F0"))
                         .cornerRadius(.infinity)
-                    Text("年租¥\(Int(payout.annualRent))")
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                    Text("年租\(Int(payout.annualRent))")
                         .font(.system(size: 12))
                         .foregroundColor(.themeText2)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
                         .background(Color(hex: "FFF3E0"))
                         .cornerRadius(.infinity)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
-                // 第三行：免租期 + 备注
-                HStack(spacing: 6) {
-                    if payout.rentFreeDays > 0 {
-                        Text("免租\(payout.rentFreeDays)天")
-                            .font(.system(size: 11))
-                            .foregroundColor(.themeAmber)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 3)
-                            .background(Color(hex: "FFF8E1"))
-                            .cornerRadius(.infinity)
-                    }
-                    if !payout.notes.isEmpty {
-                        Text(payout.notes)
-                            .font(.system(size: 11))
-                            .foregroundColor(.themeText2)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 3)
-                            .background(Color(hex: "F3E5F5"))
-                            .cornerRadius(.infinity)
-                            .lineLimit(1)
-                    }
+                // 第三行：备注
+                if !payout.notes.isEmpty {
+                    Text(payout.notes)
+                        .font(.system(size: 11))
+                        .foregroundColor(.themeText2)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 3)
+                        .background(Color(hex: "F3E5F5"))
+                        .cornerRadius(.infinity)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             Spacer()
-            let paidCount = payout.monthlyPayouts.filter { $0.isPaid }.count
+
+            // 右侧：已付次数 + 已付金额 + 已付水电费
             VStack(alignment: .trailing, spacing: 4) {
-                Text("\(paidCount)/12月")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.themeText2)
-                Text("已打¥\(Int(payout.monthlyPayouts.filter { $0.isPaid }.reduce(0) { $0 + $1.amount }))")
-                    .font(.system(size: 11))
-                    .foregroundColor(Color(hex: "6B3FA0"))
+                HStack(spacing: 0) {
+                    Text("已付")
+                        .font(.system(size: 10))
+                        .foregroundColor(.white)
+                    Text("\(paidCount)")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+                    Text("次租金")
+                        .font(.system(size: 10))
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.themeAccent)
+                .cornerRadius(.infinity)
+
+                HStack(spacing: 0) {
+                    Text("已付")
+                        .font(.system(size: 10))
+                        .foregroundColor(.white)
+                    Text("\(Int(paidAmount))")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+                    Text("元")
+                        .font(.system(size: 10))
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color(hex: "6B3FA0"))
+                .cornerRadius(.infinity)
+
+                HStack(spacing: 0) {
+                    Text("已付水电")
+                        .font(.system(size: 10))
+                        .foregroundColor(.white)
+                    Text("\(Int(paidUtility))")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+                    Text("元")
+                        .font(.system(size: 10))
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.themeAmber)
+                .cornerRadius(.infinity)
             }
         }
         .padding(14)
@@ -316,6 +360,41 @@ struct PayoutDetailView: View {
         return f
     }
 
+    // 根据付款方式计算付款期数
+    private var periodCount: Int {
+        switch payout.paymentMethod {
+        case "季付": return 4
+        case "半年付": return 2
+        case "年付": return 1
+        default: return 12
+        }
+    }
+
+    // 根据付款方式计算每期金额
+    private var periodAmount: Double {
+        periodCount > 0 ? payout.annualRent / Double(periodCount) : 0
+    }
+
+    // 根据付款方式获取每期对应的月份（用于关联monthlyPayouts）
+    private func periodMonth(for index: Int) -> Int {
+        switch payout.paymentMethod {
+        case "季付": return (index + 1) * 3
+        case "半年付": return (index + 1) * 6
+        case "年付": return 12
+        default: return index + 1
+        }
+    }
+
+    // 根据付款方式获取每期标签
+    private func periodLabel(for index: Int) -> String {
+        switch payout.paymentMethod {
+        case "季付": return "第\(index + 1)季"
+        case "半年付": return index == 0 ? "上半年" : "下半年"
+        case "年付": return "全年"
+        default: return months[index]
+        }
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -326,17 +405,31 @@ struct PayoutDetailView: View {
                     LabeledContent("年租金", value: "¥\(Int(payout.annualRent))")
                     LabeledContent("押金", value: "¥\(Int(payout.deposit))")
                     LabeledContent("付款方式", value: payout.paymentMethod)
+                    LabeledContent("交租日", value: "每月\(payout.rentDueDay)号")
                     LabeledContent("免租期", value: payout.rentFreeDays > 0 ? "\(payout.rentFreeDays)天" : "无")
                     LabeledContent("起租期", value: dateFormatter.string(from: payout.leaseStartDate))
                     LabeledContent("到期日", value: dateFormatter.string(from: payout.leaseEndDate))
                     if !payout.leaseDuration.isEmpty { LabeledContent("租期", value: payout.leaseDuration) }
-                    LabeledContent("水表底数", value: "\(payout.waterMeterBase)")
                     if !payout.notes.isEmpty { LabeledContent("备注", value: payout.notes) }
                 }
-                Section("月度打租（金额可修改，打勾可取消）") {
-                    ForEach(0..<12, id: \.self) { idx in
-                        MonthPayoutRow(payout: payout, month: idx + 1, label: months[idx], defaultAmount: payout.annualRent / 12)
+
+                Section("打租计划（\(payout.paymentMethod)，共\(periodCount)期）") {
+                    ForEach(0..<periodCount, id: \.self) { idx in
+                        let month = periodMonth(for: idx)
+                        MonthPayoutRow(payout: payout, month: month, label: periodLabel(for: idx), defaultAmount: periodAmount)
                     }
+                }
+
+                Section("水电结算（按月，金额可输入，打勾可取消）") {
+                    ForEach(0..<12, id: \.self) { idx in
+                        let month = idx + 1
+                        PayoutUtilityRow(payout: payout, month: month, label: months[idx])
+                    }
+                }
+
+                Section("水电底数") {
+                    LabeledContent("水表底数", value: "\(payout.waterMeterBase)")
+                    LabeledContent("电表底数", value: "\(payout.electricMeterBase)")
                 }
             }
             .scrollContentBackground(.hidden)
@@ -405,6 +498,69 @@ struct MonthPayoutRow: View {
     }
 }
 
+// MARK: - 包租按月水电费行（可输入金额+可取消打勾）
+struct PayoutUtilityRow: View {
+    let payout: PayoutRecord
+    let month: Int
+    let label: String
+    @State private var waterText: String
+    @State private var electricText: String
+    @State private var isSettled: Bool
+
+    init(payout: PayoutRecord, month: Int, label: String) {
+        self.payout = payout
+        self.month = month
+        self.label = label
+        let record = payout.monthlyUtilityRecords.first { $0.month == month }
+        _waterText = State(initialValue: record?.waterAmount ?? 0 > 0 ? String(Int(record?.waterAmount ?? 0)) : "")
+        _electricText = State(initialValue: record?.electricAmount ?? 0 > 0 ? String(Int(record?.electricAmount ?? 0)) : "")
+        _isSettled = State(initialValue: record?.isSettled ?? false)
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(label).foregroundColor(.themeText).frame(width: 35, alignment: .leading)
+            Spacer()
+            Text("水").foregroundColor(.themeText3).font(.system(size: 12))
+            TextField("0", text: $waterText)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .foregroundColor(.themeText)
+                .frame(width: 50)
+                .onChange(of: waterText) { _, _ in updateRecord() }
+            Text("电").foregroundColor(.themeText3).font(.system(size: 12))
+            TextField("0", text: $electricText)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .foregroundColor(.themeText)
+                .frame(width: 50)
+                .onChange(of: electricText) { _, _ in updateRecord() }
+            Button {
+                isSettled.toggle()
+                updateRecord()
+            } label: {
+                Image(systemName: isSettled ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(isSettled ? .themeAccent : .themeText3)
+                    .font(.system(size: 22))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func updateRecord() {
+        let water = Double(waterText) ?? 0
+        let electric = Double(electricText) ?? 0
+        if let index = payout.monthlyUtilityRecords.firstIndex(where: { $0.month == month }) {
+            payout.monthlyUtilityRecords[index].waterAmount = water
+            payout.monthlyUtilityRecords[index].electricAmount = electric
+            payout.monthlyUtilityRecords[index].isSettled = isSettled
+        } else {
+            let record = PayoutUtilityRecord(month: month, waterAmount: water, electricAmount: electric, isSettled: isSettled)
+            payout.monthlyUtilityRecords.append(record)
+        }
+    }
+}
+
 // MARK: - 新增打租记录
 struct AddPayoutView: View {
     @Environment(\.modelContext) private var modelContext
@@ -422,6 +578,8 @@ struct AddPayoutView: View {
     @State private var annualRentText: String
     @State private var depositText: String
     @State private var waterMeterText: String
+    @State private var electricMeterText: String
+    @State private var rentDueDay: Int
     @State private var paymentMethod: String
     @State private var notes: String
 
@@ -440,6 +598,8 @@ struct AddPayoutView: View {
         _annualRentText = State(initialValue: payout.map { $0.annualRent > 0 ? String(Int($0.annualRent)) : "" } ?? "")
         _depositText = State(initialValue: payout.map { $0.deposit > 0 ? String(Int($0.deposit)) : "" } ?? "")
         _waterMeterText = State(initialValue: payout.map { $0.waterMeterBase > 0 ? String($0.waterMeterBase) : "" } ?? "")
+        _electricMeterText = State(initialValue: payout.map { $0.electricMeterBase > 0 ? String($0.electricMeterBase) : "" } ?? "")
+        _rentDueDay = State(initialValue: payout?.rentDueDay ?? 1)
         _paymentMethod = State(initialValue: payout?.paymentMethod ?? "月付")
         _notes = State(initialValue: payout?.notes ?? "")
     }
@@ -463,7 +623,12 @@ struct AddPayoutView: View {
                 Section("金额") {
                     AmountField(label: "年租金", text: $annualRentText)
                     AmountField(label: "押金", text: $depositText)
+                    Picker("交租日", selection: $rentDueDay) { ForEach(1...31, id: \.self) { Text("\($0)号").tag($0) } }
+                }
+                Section("水电底数") {
                     TextField("水表底数", text: $waterMeterText)
+                        .keyboardType(.numberPad)
+                    TextField("电表底数", text: $electricMeterText)
                         .keyboardType(.numberPad)
                 }
                 Section("备注") { TextField("备注", text: $notes, axis: .vertical) }
@@ -487,6 +652,8 @@ struct AddPayoutView: View {
                             p.annualRent = Double(annualRentText) ?? 0
                             p.deposit = Double(depositText) ?? 0
                             p.waterMeterBase = Int(waterMeterText) ?? 0
+                            p.electricMeterBase = Int(electricMeterText) ?? 0
+                            p.rentDueDay = rentDueDay
                             p.paymentMethod = paymentMethod
                             p.notes = notes
                         } else {
@@ -496,7 +663,10 @@ struct AddPayoutView: View {
                                 leaseDuration: leaseDuration, rentFreeDays: Int(rentFreeDaysText) ?? 0,
                                 annualRent: Double(annualRentText) ?? 0,
                                 deposit: Double(depositText) ?? 0,
-                                waterMeterBase: Int(waterMeterText) ?? 0, paymentMethod: paymentMethod, notes: notes)
+                                waterMeterBase: Int(waterMeterText) ?? 0,
+                                electricMeterBase: Int(electricMeterText) ?? 0,
+                                rentDueDay: rentDueDay,
+                                paymentMethod: paymentMethod, notes: notes)
                             modelContext.insert(payout)
                         }
                         dismiss()
