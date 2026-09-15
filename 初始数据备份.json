@@ -1,0 +1,484 @@
+{
+  "deals": [
+    {
+      "date": "2026-01-15T00:00:00",
+      "roomNumber": "1-1001",
+      "landlord": "张房东",
+      "unitType": "单间",
+      "leaseStart": "2026-01-15T00:00:00",
+      "leaseEnd": "2027-01-14T00:00:00",
+      "leaseDuration": "1年",
+      "rent": 1000.0,
+      "deposit": 1000.0,
+      "prepayment": 300.0,
+      "rentDueDay": 1,
+      "agentFeeLandlord": 500.0,
+      "agentFeeTenant": 300.0,
+      "totalFee": 800.0,
+      "manager": "涛",
+      "source": "平台",
+      "notes": "示例数据"
+    },
+    {
+      "date": "2025-11-27T00:00:00",
+      "roomNumber": "1-2254下",
+      "landlord": "康",
+      "unitType": "独立厨房下层",
+      "leaseStart": "2025-11-25T00:00:00",
+      "leaseEnd": "2026-11-30T00:00:00",
+      "leaseDuration": "1年",
+      "rent": 1050.0,
+      "deposit": 1050.0,
+      "prepayment": 300.0,
+      "rentDueDay": 0,
+      "agentFeeLandlord": 525.0,
+      "agentFeeTenant": 300.0,
+      "totalFee": 825.0,
+      "manager": "涛",
+      "source": "平台",
+      "notes": "合同日期写错"
+    },
+    {
+      "date": "2025-12-01T00:00:00",
+      "roomNumber": "1-2041上",
+      "landlord": "何",
+      "unitType": "单间上层",
+      "leaseStart": "2025-12-01T00:00:00",
+      "leaseEnd": "2026-03-16T00:00:00",
+      "leaseDuration": "3.5月",
+      "rent": 1150.0,
+      "deposit": 2300.0,
+      "prepayment": 300.0,
+      "rentDueDay": 0,
+      "agentFeeLandlord": 388.0,
+      "agentFeeTenant": 0,
+      "totalFee": 388.0,
+      "manager": "康",
+      "source": "康",
+      "notes": ""
+    },
+    {
+      "date": "2025-12-04T00:00:00",
+      "roomNumber": "1-1119",
+      "landlord": "汇",
+      "unitType": "复式",
+      "leaseStart": "2025-12-06T00:00:00",
+      "leaseEnd": "2026-12-05T00:00:00",
+      "leaseDuration": "1年",
+      "rent": 1500.0,
+      "deposit": 3000.0,
+      "prepayment": 0,
+      "rentDueDay": 0,
+      "agentFeeLandlord": 850.0,
+      "agentFeeTenant": 0,
+      "totalFee": 850.0,
+      "manager": "涛",
+      "source": "何",
+      "notes": "保安介绍"
+    },
+    {
+      "date": "2025-12-11T00:00:00",
+      "roomNumber": "1-1322上",
+      "landlord": "罗",
+      "unitType": "单间上层",
+      "leaseStart": "2026-09-15T21:17:56.752433",
+      "leaseEnd": "2026-09-15T21:17:56.752449",
+      "leaseDuration": "",
+      "rent": 900.0,
+      "deposit": 0,
+      "prepayment": 0,
+      "rentDueDay": null,
+      "agentFeeLandlord": 450.0,
+      "agentFeeTenant": 0,
+      "totalFee": 450.0,
+      "manager": "罗",
+      "source": "平台",
+      "notes": "转何生"
+    }
+  ],
+  "incomes": [
+    {
+      "date": "2026-01-20T00:00:00",
+      "item": "管理费",
+      "amount": 500.0,
+      "notes": "示例数据"
+    },
+    {
+      "date": "2026-05-20T00:00:00",
+      "item": "1359租金+押金",
+      "amount": 2800.0,
+      "notes": "押一付一 1400"
+    },
+    {
+      "date": "2026-05-23T00:00:00",
+      "item": "1748管理费",
+      "amount": 800.0,
+      "notes": ""
+    },
+    {
+      "date": "2026-06-01T00:00:00",
+      "item": "1119违约押金",
+      "amount": 2313.6,
+      "notes": ""
+    },
+    {
+      "date": "2026-06-03T00:00:00",
+      "item": "1748宽带",
+      "amount": 150.0,
+      "notes": "移动1000M"
+    }
+  ],
+  "expenses": [
+    {
+      "date": "2026-01-25T00:00:00",
+      "item": "端口费",
+      "amount": 200.0,
+      "notes": "示例数据"
+    },
+    {
+      "date": "2026-02-26T00:00:00",
+      "item": "端口",
+      "amount": 2030.0,
+      "notes": "季度"
+    },
+    {
+      "date": "2026-04-01T00:00:00",
+      "item": "2348房租",
+      "amount": 1000.0,
+      "notes": ""
+    },
+    {
+      "date": "2026-05-01T00:00:00",
+      "item": "2348房租",
+      "amount": 1100.0,
+      "notes": ""
+    },
+    {
+      "date": "2026-05-10T00:00:00",
+      "item": "1359房租金+押金",
+      "amount": 2650.0,
+      "notes": "5.6.7三个月租金+押金"
+    }
+  ],
+  "properties": [
+    {
+      "rentDueDay": 1,
+      "roomNumber": "1-1001",
+      "landlord": "张房东",
+      "unitType": "单间",
+      "leaseStart": "2026-01-15",
+      "leaseEnd": "2027-01-14",
+      "leaseDuration": "1年",
+      "rent": 1000.0,
+      "prepayment": 300.0,
+      "deposit": 1000.0,
+      "waterMeterBase": 100,
+      "electricMeterBase": 5000,
+      "propertyType": "管理",
+      "notes": "示例数据",
+      "monthlyRentRecords": [
+        {
+          "month": 1,
+          "amount": 1000.0,
+          "isPaid": true
+        },
+        {
+          "month": 2,
+          "amount": 1000.0,
+          "isPaid": true
+        }
+      ],
+      "quarterlyUtilityRecords": []
+    },
+    {
+      "rentDueDay": 1,
+      "roomNumber": "1-2254下",
+      "landlord": "康",
+      "unitType": "独立厨房下层",
+      "leaseStart": "2025-11-25",
+      "leaseEnd": "2026-11-30",
+      "leaseDuration": "1年",
+      "rent": 1050.0,
+      "prepayment": 300.0,
+      "deposit": 1050.0,
+      "waterMeterBase": -79,
+      "electricMeterBase": 7042,
+      "propertyType": "管理",
+      "notes": "",
+      "monthlyRentRecords": [
+        {
+          "month": 1,
+          "amount": 1350.0,
+          "isPaid": true
+        },
+        {
+          "month": 2,
+          "amount": 1350.0,
+          "isPaid": true
+        },
+        {
+          "month": 3,
+          "amount": 600.0,
+          "isPaid": true
+        },
+        {
+          "month": 4,
+          "amount": 1350.0,
+          "isPaid": true
+        },
+        {
+          "month": 5,
+          "amount": 1350.0,
+          "isPaid": true
+        },
+        {
+          "month": 6,
+          "amount": 864.0,
+          "isPaid": true
+        },
+        {
+          "month": 7,
+          "amount": 1350.0,
+          "isPaid": true
+        },
+        {
+          "month": 8,
+          "amount": 1350.0,
+          "isPaid": true
+        },
+        {
+          "month": 9,
+          "amount": 1000.0,
+          "isPaid": true
+        },
+        {
+          "month": 12,
+          "amount": 1560.0,
+          "isPaid": true
+        }
+      ],
+      "quarterlyUtilityRecords": [
+        {
+          "quarter": 1,
+          "electricAmount": 0,
+          "waterAmount": 150.0,
+          "isSettled": true
+        },
+        {
+          "quarter": 2,
+          "electricAmount": 0,
+          "waterAmount": 336.0,
+          "isSettled": true
+        },
+        {
+          "quarter": 3,
+          "electricAmount": 0,
+          "waterAmount": 845.0,
+          "isSettled": true
+        }
+      ]
+    },
+    {
+      "rentDueDay": 1,
+      "roomNumber": "1-2338上",
+      "landlord": "康",
+      "unitType": "单间上层",
+      "leaseStart": "2026-03-07",
+      "leaseEnd": "2027-03-07",
+      "leaseDuration": "1年",
+      "rent": 1050.0,
+      "prepayment": 300.0,
+      "deposit": 2100.0,
+      "waterMeterBase": 119,
+      "electricMeterBase": 2272,
+      "propertyType": "管理",
+      "notes": "",
+      "monthlyRentRecords": [
+        {
+          "month": 3,
+          "amount": 1140.0,
+          "isPaid": true
+        },
+        {
+          "month": 4,
+          "amount": 1350.0,
+          "isPaid": true
+        },
+        {
+          "month": 5,
+          "amount": 1350.0,
+          "isPaid": true
+        },
+        {
+          "month": 6,
+          "amount": 687.0,
+          "isPaid": true
+        },
+        {
+          "month": 7,
+          "amount": 1350.0,
+          "isPaid": true
+        },
+        {
+          "month": 8,
+          "amount": 1350.0,
+          "isPaid": true
+        },
+        {
+          "month": 9,
+          "amount": 975.0,
+          "isPaid": true
+        }
+      ],
+      "quarterlyUtilityRecords": [
+        {
+          "quarter": 1,
+          "electricAmount": 0,
+          "waterAmount": 237.0,
+          "isSettled": true
+        },
+        {
+          "quarter": 2,
+          "electricAmount": 0,
+          "waterAmount": 525.0,
+          "isSettled": true
+        }
+      ]
+    },
+    {
+      "rentDueDay": 1,
+      "roomNumber": "2-1222上",
+      "landlord": "汇",
+      "unitType": "单间上层",
+      "leaseStart": "2026-03-05",
+      "leaseEnd": "2027-03-05",
+      "leaseDuration": "1年",
+      "rent": 1000.0,
+      "prepayment": 300.0,
+      "deposit": 2000.0,
+      "waterMeterBase": 197,
+      "electricMeterBase": 10516,
+      "propertyType": "管理",
+      "notes": "",
+      "monthlyRentRecords": [
+        {
+          "month": 3,
+          "amount": 1133.0,
+          "isPaid": true
+        },
+        {
+          "month": 4,
+          "amount": 1300.0,
+          "isPaid": true
+        },
+        {
+          "month": 5,
+          "amount": 1300.0,
+          "isPaid": true
+        },
+        {
+          "month": 6,
+          "amount": 966.0,
+          "isPaid": true
+        },
+        {
+          "month": 7,
+          "amount": 1300.0,
+          "isPaid": true
+        },
+        {
+          "month": 8,
+          "amount": 1300.0,
+          "isPaid": true
+        },
+        {
+          "month": 9,
+          "amount": 1533.0,
+          "isPaid": true
+        }
+      ],
+      "quarterlyUtilityRecords": [
+        {
+          "quarter": 1,
+          "electricAmount": 0,
+          "waterAmount": 566.0,
+          "isSettled": true
+        },
+        {
+          "quarter": 2,
+          "electricAmount": 0,
+          "waterAmount": 1133.0,
+          "isSettled": true
+        }
+      ]
+    },
+    {
+      "rentDueDay": 1,
+      "roomNumber": "2-518",
+      "landlord": "康",
+      "unitType": "平层",
+      "leaseStart": "2026-03-11",
+      "leaseEnd": "2027-03-11",
+      "leaseDuration": "1年",
+      "rent": 1100.0,
+      "prepayment": 0,
+      "deposit": 2200.0,
+      "waterMeterBase": 131,
+      "electricMeterBase": 0,
+      "propertyType": "管理",
+      "notes": "",
+      "monthlyRentRecords": [
+        {
+          "month": 3,
+          "amount": 696.0,
+          "isPaid": true
+        },
+        {
+          "month": 4,
+          "amount": 1100.0,
+          "isPaid": true
+        },
+        {
+          "month": 5,
+          "amount": 1100.0,
+          "isPaid": true
+        },
+        {
+          "month": 6,
+          "amount": 1150.0,
+          "isPaid": true
+        },
+        {
+          "month": 7,
+          "amount": 1100.0,
+          "isPaid": true
+        },
+        {
+          "month": 8,
+          "amount": 1100.0,
+          "isPaid": true
+        },
+        {
+          "month": 9,
+          "amount": 1155.0,
+          "isPaid": true
+        }
+      ],
+      "quarterlyUtilityRecords": [
+        {
+          "quarter": 1,
+          "electricAmount": 0,
+          "waterAmount": 50.0,
+          "isSettled": true
+        },
+        {
+          "quarter": 2,
+          "electricAmount": 0,
+          "waterAmount": 55.0,
+          "isSettled": true
+        }
+      ]
+    }
+  ],
+  "payouts": []
+}

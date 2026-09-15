@@ -6,11 +6,12 @@ class DataBackupManager {
     static let shared = DataBackupManager()
     private let isoFormatter = ISO8601DateFormatter()
     private let dateFormatters: [DateFormatter] = {
-        let formats = ["yyyy-MM-dd", "yyyy.MM.dd", "yyyy/MM/dd", "yyyy-MM-dd'T'HH:mm:ssXXXXX", "yyyy.M.d"]
+        let formats = ["yyyy-MM-dd", "yyyy.MM.dd", "yyyy/MM/dd", "yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ssXXXXX", "yyyy.M.d", "yyyy年M月d日"]
         return formats.map { fmt in
             let df = DateFormatter()
             df.dateFormat = fmt
             df.locale = Locale(identifier: "zh_CN")
+            df.timeZone = TimeZone(identifier: "Asia/Shanghai")
             return df
         }
     }()
