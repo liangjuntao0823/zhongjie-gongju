@@ -25,15 +25,6 @@
 		A10000010000000000000097 /* initialData.json in Resources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000097 /* initialData.json */; };
 		A10000010000000000000098 /* presetBackup.json in Resources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000098 /* presetBackup.json */; };
 		A10000010000000000000013 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000013 /* Preview Assets.xcassets */; };
-		DEA6E7C0D71B439B96B0DB73 /* Archive+MemoryFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AB118CE24E745D5AF1716C0 /* Archive+MemoryFile.swift */; };
-		3C874B7728E742E3879DEC62 /* Archive+Reading.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52ACA50216BA4E58B516E684 /* Archive+Reading.swift */; };
-		3F96DB51C2D54E7484C83293 /* Archive+Writing.swift in Sources */ = {isa = PBXBuildFile; fileRef = A310791DBC3649A28323E415 /* Archive+Writing.swift */; };
-		ACAB0B7E7E674D098849E8CE /* Archive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65FC315DD8B14EB8BCDD1735 /* Archive.swift */; };
-		34179C6EBD0B41D5A8F6527B /* Data+Compression.swift in Sources */ = {isa = PBXBuildFile; fileRef = E93C92CCFB3B4812AF9C71F3 /* Data+Compression.swift */; };
-		4B0A64C921D24EFEAD5C6722 /* Data+Serialization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25D10F3D8D1F4E40BB5A641D /* Data+Serialization.swift */; };
-		CE9BFF8002634842BEE601F0 /* Entry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B04BDF9248974A5A8C0CB288 /* Entry.swift */; };
-		A8D5A25B7CF04A9DAEA66525 /* FileManager+ZIP.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36BACF577492491AABD119A8 /* FileManager+ZIP.swift */; };
-		DA98331BFCD94BEC9135E8CA /* XLSXParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15CB1826967E410C9B4B6817 /* XLSXParser.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,15 +47,6 @@
 		B10000010000000000000098 /* presetBackup.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = presetBackup.json; sourceTree = "<group>"; };
 		B10000010000000000000013 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		B10000010000000000000014 /* AgentTool.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AgentTool.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		2AB118CE24E745D5AF1716C0 /* Archive+MemoryFile.swift in Sources */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Archive+MemoryFile.swift"; sourceTree = "<group>"; };
-		52ACA50216BA4E58B516E684 /* Archive+Reading.swift in Sources */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Archive+Reading.swift"; sourceTree = "<group>"; };
-		A310791DBC3649A28323E415 /* Archive+Writing.swift in Sources */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Archive+Writing.swift"; sourceTree = "<group>"; };
-		65FC315DD8B14EB8BCDD1735 /* Archive.swift in Sources */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Archive.swift"; sourceTree = "<group>"; };
-		E93C92CCFB3B4812AF9C71F3 /* Data+Compression.swift in Sources */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Data+Compression.swift"; sourceTree = "<group>"; };
-		25D10F3D8D1F4E40BB5A641D /* Data+Serialization.swift in Sources */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Data+Serialization.swift"; sourceTree = "<group>"; };
-		B04BDF9248974A5A8C0CB288 /* Entry.swift in Sources */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Entry.swift"; sourceTree = "<group>"; };
-		36BACF577492491AABD119A8 /* FileManager+ZIP.swift in Sources */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FileManager+ZIP.swift"; sourceTree = "<group>"; };
-		15CB1826967E410C9B4B6817 /* XLSXParser.swift in Sources */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "XLSXParser.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,9 +79,7 @@
 				B10000010000000000000097 /* initialData.json */,
 				B10000010000000000000098 /* presetBackup.json */,
 				D10000010000000000000007 /* Preview Content */,
-			
-				DC06783E77484752BDD6B6F1 /* ThirdParty */,
-);
+			);
 			path = AgentTool;
 			sourceTree = "<group>";
 		};
@@ -141,9 +121,7 @@
 				B10000010000000000000095 /* SettingsView.swift */,
 				B10000010000000000000011 /* UtilityView.swift */,
 				B10000010000000000000015 /* Theme.swift */,
-			
-				15CB1826967E410C9B4B6817 /* XLSXParser.swift */,
-);
+			);
 			path = Views;
 			sourceTree = "<group>";
 		};
@@ -155,31 +133,6 @@
 			path = "Preview Content";
 			sourceTree = "<group>";
 		};
-
-		DC06783E77484752BDD6B6F1 /* ThirdParty */ = {
-			isa = PBXGroup;
-			children = (
-				8F1F304E562040ED812A77A7 /* ZIPFoundation */,
-			);
-			path = ThirdParty;
-			sourceTree = "<group>";
-		};
-		8F1F304E562040ED812A77A7 /* ZIPFoundation */ = {
-			isa = PBXGroup;
-			children = (
-				2AB118CE24E745D5AF1716C0 /* Archive+MemoryFile.swift */,
-				52ACA50216BA4E58B516E684 /* Archive+Reading.swift */,
-				A310791DBC3649A28323E415 /* Archive+Writing.swift */,
-				65FC315DD8B14EB8BCDD1735 /* Archive.swift */,
-				E93C92CCFB3B4812AF9C71F3 /* Data+Compression.swift */,
-				25D10F3D8D1F4E40BB5A641D /* Data+Serialization.swift */,
-				B04BDF9248974A5A8C0CB288 /* Entry.swift */,
-				36BACF577492491AABD119A8 /* FileManager+ZIP.swift */,
-			);
-			path = ZIPFoundation;
-			sourceTree = "<group>";
-		};
-
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -252,17 +205,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DA98331BFCD94BEC9135E8CA /* XLSXParser.swift in Sources */,
-
-				DEA6E7C0D71B439B96B0DB73 /* Archive+MemoryFile.swift in Sources */,
-				3C874B7728E742E3879DEC62 /* Archive+Reading.swift in Sources */,
-				3F96DB51C2D54E7484C83293 /* Archive+Writing.swift in Sources */,
-				ACAB0B7E7E674D098849E8CE /* Archive.swift in Sources */,
-				34179C6EBD0B41D5A8F6527B /* Data+Compression.swift in Sources */,
-				4B0A64C921D24EFEAD5C6722 /* Data+Serialization.swift in Sources */,
-				CE9BFF8002634842BEE601F0 /* Entry.swift in Sources */,
-				A8D5A25B7CF04A9DAEA66525 /* FileManager+ZIP.swift in Sources */,
-
 				A10000010000000000000001 /* App.swift in Sources */,
 				A10000010000000000000002 /* Property.swift in Sources */,
 				A10000010000000000000003 /* DealRecord.swift in Sources */,
