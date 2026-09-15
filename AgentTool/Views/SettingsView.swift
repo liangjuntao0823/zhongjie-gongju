@@ -3,11 +3,11 @@ import SwiftData
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var backupFiles: [URL] = []
     @State private var showMessage = ""
     @State private var showAlert = false
     @State private var showClearConfirm = false
     @State private var showRestoreList = false
+    @State private var isImporting = false
     @State private var autoBackupEnabled = false
     @State private var backupFrequency = "day"
     @State private var backupHour = 23
@@ -29,7 +29,7 @@ struct SettingsView: View {
                         HStack {
                             Image(systemName: "square.and.arrow.down.fill")
                                 .foregroundColor(.themeAccent)
-                                .frame(width: 30)
+                                .frame(width: 24)
                             Text("备份数据")
                                 .foregroundColor(.themeText)
                             Spacer()
@@ -39,13 +39,12 @@ struct SettingsView: View {
                     }
 
                     Button {
-                        loadBackupFiles()
                         showRestoreList = true
                     } label: {
                         HStack {
                             Image(systemName: "square.and.arrow.up.fill")
                                 .foregroundColor(.themeAccent)
-                                .frame(width: 30)
+                                .frame(width: 24)
                             Text("恢复数据")
                                 .foregroundColor(.themeText)
                             Spacer()
@@ -55,33 +54,38 @@ struct SettingsView: View {
                     }
 
                     Button {
-                        showClearConfirm = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "trash.fill")
-                                .foregroundColor(.white)
-                                .frame(width: 30)
-                            Text("清空数据")
-                                .foregroundColor(.white)
-                            Spacer()
-                        }
-                        .listRowBackground(Color.red)
-                    }
-
-                    Button {
                         importInitialData()
                     } label: {
                         HStack {
                             Image(systemName: "arrow.down.doc.fill")
                                 .foregroundColor(.themeAccent)
-                                .frame(width: 30)
+                                .frame(width: 24)
                             Text("导入初始数据")
                                 .foregroundColor(.themeText)
                             Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.themeText3)
+                            if isImporting {
+                                ProgressView()
+                            } else {
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.themeText3)
+                            }
                         }
                     }
+                    .disabled(isImporting)
+
+                    Button {
+                        showClearConfirm = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "trash.fill")
+                                .foregroundColor(.white)
+                                .frame(width: 24)
+                            Text("清空数据")
+                                .foregroundColor(.white)
+                            Spacer()
+                        }
+                    }
+                    .listRowBackground(Color.red)
                 }
 
                 Section("自动备份") {
@@ -118,8 +122,16 @@ struct SettingsView: View {
                     HStack {
                         Text("版本")
                         Spacer()
-                        Text("2.13").foregroundColor(.themeText2)
+                        Text("2.14").foregroundColor(.themeText2)
                     }
+                }
+
+                Section {
+                    Text("开发者：豆包And涛哥")
+                        .font(.footnote)
+                        .foregroundColor(.themeText3)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .listRowBackground(Color.clear)
                 }
             }
             .scrollContentBackground(.hidden)
@@ -139,14 +151,14 @@ struct SettingsView: View {
                 Text("确定要清空所有数据吗？此操作不可恢复，建议先备份数据。")
             }
             .sheet(isPresented: $showRestoreList) {
-                RestoreBackupView(folder: backupFolder, files: backupFiles) { url in
+                RestoreBackupView(folder: backupFolder) { url in
                     restoreData(from: url)
                 }
             }
         }
     }
 
-    // 备份数据
+    // 备份数据 - 文件名格式 20260915-1853
     private func backupData() {
         guard let data = DataBackupManager.shared.exportAllData(modelContext: modelContext) else {
             showMessage = "备份失败"
@@ -154,8 +166,8 @@ struct SettingsView: View {
             return
         }
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyyMMdd-HHmmss"
-        let filename = "备份-\(formatter.string(from: Date())).json"
+        formatter.dateFormat = "yyyyMMdd-HHmm"
+        let filename = "\(formatter.string(from: Date())).json"
         let fileURL = backupFolder.appendingPathComponent(filename)
         do {
             try data.write(to: fileURL)
@@ -167,18 +179,6 @@ struct SettingsView: View {
         }
     }
 
-    // 加载备份文件列表
-    private func loadBackupFiles() {
-        do {
-            let files = try FileManager.default.contentsOfDirectory(at: backupFolder, includingPropertiesForKeys: [.creationDateKey], options: [.skipsHiddenFiles])
-            backupFiles = files.filter { $0.pathExtension == "json" }.sorted {
-                ($0.pathComponents.last ?? "") > ($1.pathComponents.last ?? "")
-            }
-        } catch {
-            backupFiles = []
-        }
-    }
-
     // 恢复数据
     private func restoreData(from url: URL) {
         guard let data = try? Data(contentsOf: url) else {
@@ -186,34 +186,51 @@ struct SettingsView: View {
             showAlert = true
             return
         }
-        if DataBackupManager.shared.importAllData(from: data, modelContext: modelContext) {
-            showMessage = "数据恢复成功"
-        } else {
-            showMessage = "数据恢复失败"
+        DataBackupManager.shared.importAllData(from: data, modelContext: modelContext) { success in
+            DispatchQueue.main.async {
+                showMessage = success ? "数据恢复成功" : "数据恢复失败"
+                showAlert = true
+            }
         }
-        showAlert = true
+    }
+
+    // 导入初始数据
+    private func importInitialData() {
+        isImporting = true
+        DataBackupManager.shared.importInitialData(modelContext: modelContext) { success in
+            DispatchQueue.main.async {
+                isImporting = false
+                if success {
+                    UserDefaults.standard.set(true, forKey: "initialDataImported")
+                    showMessage = "初始数据导入成功"
+                } else {
+                    showMessage = "初始数据导入失败"
+                }
+                showAlert = true
+            }
+        }
     }
 
     // 清空数据
     private func clearData() {
-        try? modelContext.delete(model: DealRecord.self)
-        try? modelContext.delete(model: MiscIncome.self)
-        try? modelContext.delete(model: MiscExpense.self)
-        try? modelContext.delete(model: Property.self)
-        try? modelContext.delete(model: PayoutRecord.self)
+        if let deals = try? modelContext.fetch(FetchDescriptor<DealRecord>()) {
+            for item in deals { modelContext.delete(item) }
+        }
+        if let incomes = try? modelContext.fetch(FetchDescriptor<MiscIncome>()) {
+            for item in incomes { modelContext.delete(item) }
+        }
+        if let expenses = try? modelContext.fetch(FetchDescriptor<MiscExpense>()) {
+            for item in expenses { modelContext.delete(item) }
+        }
+        if let properties = try? modelContext.fetch(FetchDescriptor<Property>()) {
+            for item in properties { modelContext.delete(item) }
+        }
+        if let payouts = try? modelContext.fetch(FetchDescriptor<PayoutRecord>()) {
+            for item in payouts { modelContext.delete(item) }
+        }
         try? modelContext.save()
         UserDefaults.standard.removeObject(forKey: "initialDataImported")
         showMessage = "数据已清空"
-        showAlert = true
-    }
-
-    private func importInitialData() {
-        if DataBackupManager.shared.importInitialData(modelContext: modelContext) {
-            UserDefaults.standard.set(true, forKey: "initialDataImported")
-            showMessage = "初始数据导入成功"
-        } else {
-            showMessage = "初始数据导入失败，请检查文件是否存在"
-        }
         showAlert = true
     }
 
@@ -237,8 +254,8 @@ struct SettingsView: View {
 // 恢复备份列表视图
 struct RestoreBackupView: View {
     let folder: URL
-    let files: [URL]
     let onSelect: (URL) -> Void
+    @State private var files: [URL] = []
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -274,6 +291,20 @@ struct RestoreBackupView: View {
                     Button("取消") { dismiss() }
                 }
             }
+            .onAppear {
+                loadFiles()
+            }
+        }
+    }
+
+    private func loadFiles() {
+        do {
+            let allFiles = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.creationDateKey], options: [.skipsHiddenFiles])
+            files = allFiles.filter { $0.pathExtension == "json" }.sorted {
+                $0.lastPathComponent > $1.lastPathComponent
+            }
+        } catch {
+            files = []
         }
     }
 }

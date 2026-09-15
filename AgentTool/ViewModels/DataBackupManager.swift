@@ -6,7 +6,7 @@ class DataBackupManager {
     static let shared = DataBackupManager()
     private let isoFormatter = ISO8601DateFormatter()
     private let dateFormatters: [DateFormatter] = {
-        let formats = ["yyyy-MM-dd", "yyyy.MM.dd", "yyyy/MM/dd", "yyyy-MM-dd'T'HH:mm:ssXXXXX"]
+        let formats = ["yyyy-MM-dd", "yyyy.MM.dd", "yyyy/MM/dd", "yyyy-MM-dd'T'HH:mm:ssXXXXX", "yyyy.M.d"]
         return formats.map { fmt in
             let df = DateFormatter()
             df.dateFormat = fmt
@@ -24,6 +24,26 @@ class DataBackupManager {
         return Date()
     }
 
+    private func dbl(_ v: Any?) -> Double {
+        if let n = v as? Double { return n }
+        if let n = v as? Int { return Double(n) }
+        if let s = v as? String, let n = Double(s) { return n }
+        return 0
+    }
+
+    private func intVal(_ v: Any?) -> Int {
+        if let n = v as? Int { return n }
+        if let n = v as? Double { return Int(n) }
+        if let s = v as? String, let n = Int(s) { return n }
+        return 0
+    }
+
+    private func strVal(_ v: Any?) -> String {
+        if let s = v as? String { return s }
+        if let n = v as? NSNumber { return n.stringValue }
+        return ""
+    }
+
     // 导出所有数据为JSON
     func exportAllData(modelContext: ModelContext) -> Data? {
         let deals = (try? modelContext.fetch(FetchDescriptor<DealRecord>())) ?? []
@@ -34,7 +54,6 @@ class DataBackupManager {
 
         var dict: [String: Any] = [:]
 
-        // 成交
         dict["deals"] = deals.map { deal in
             [
                 "date": isoFormatter.string(from: deal.date),
@@ -57,17 +76,14 @@ class DataBackupManager {
             ]
         }
 
-        // 杂项收入
         dict["incomes"] = incomes.map { inc in
             ["date": isoFormatter.string(from: inc.date), "item": inc.item, "amount": inc.amount, "notes": inc.notes]
         }
 
-        // 杂项支出
         dict["expenses"] = expenses.map { exp in
             ["date": isoFormatter.string(from: exp.date), "item": exp.item, "amount": exp.amount, "notes": exp.notes]
         }
 
-        // 房源
         dict["properties"] = properties.map { prop in
             [
                 "roomNumber": prop.roomNumber,
@@ -89,7 +105,6 @@ class DataBackupManager {
             ]
         }
 
-        // 包租
         dict["payouts"] = payouts.map { p in
             [
                 "roomNumber": p.roomNumber,
@@ -111,150 +126,169 @@ class DataBackupManager {
         return try? JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
     }
 
-    // 从JSON导入数据（清空后导入）
-    func importAllData(from data: Data, modelContext: ModelContext) -> Bool {
-        guard let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
-
-        // 清空现有数据
-        try? modelContext.delete(model: DealRecord.self)
-        try? modelContext.delete(model: MiscIncome.self)
-        try? modelContext.delete(model: MiscExpense.self)
-        try? modelContext.delete(model: Property.self)
-        try? modelContext.delete(model: PayoutRecord.self)
-
-        // 导入成交
-        if let deals = dict["deals"] as? [[String: Any]] {
-            for d in deals {
-                let deal = DealRecord(
-                    date: parseDate( d["date"] as? String ?? "") ?? Date(),
-                    roomNumber: d["roomNumber"] as? String ?? "",
-                    landlord: d["landlord"] as? String ?? "",
-                    unitType: d["unitType"] as? String ?? "",
-                    leaseStart: parseDate( d["leaseStart"] as? String ?? "") ?? Date(),
-                    leaseEnd: parseDate( d["leaseEnd"] as? String ?? "") ?? Date(),
-                    leaseDuration: d["leaseDuration"] as? String ?? "",
-                    rent: d["rent"] as? Double ?? 0,
-                    deposit: d["deposit"] as? Double ?? 0,
-                    prepayment: d["prepayment"] as? Double ?? 0,
-                    rentDueDay: d["rentDueDay"] as? Int,
-                    agentFeeLandlord: d["agentFeeLandlord"] as? Double ?? 0,
-                    agentFeeTenant: d["agentFeeTenant"] as? Double ?? 0,
-                    totalFee: d["totalFee"] as? Double ?? 0,
-                    manager: d["manager"] as? String ?? "",
-                    source: d["source"] as? String ?? "",
-                    notes: d["notes"] as? String ?? ""
-                )
-                modelContext.insert(deal)
-            }
+    // 异步导入数据（清空后导入），避免主线程阻塞
+    func importAllData(from data: Data, modelContext: ModelContext, completion: @escaping (Bool) -> Void) {
+        guard let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            completion(false)
+            return
         }
 
-        // 导入杂项收入
-        if let incomes = dict["incomes"] as? [[String: Any]] {
-            for inc in incomes {
-                let income = MiscIncome(
-                    date: parseDate( inc["date"] as? String ?? "") ?? Date(),
-                    item: inc["item"] as? String ?? "",
-                    amount: inc["amount"] as? Double ?? 0,
-                    notes: inc["notes"] as? String ?? ""
-                )
-                modelContext.insert(income)
-            }
-        }
+        // 在后台线程处理数据解析
+        DispatchQueue.global(qos: .userInitiated).async {
+            // 先解析所有数据为Swift结构体
+            let dealsData = (dict["deals"] as? [[String: Any]]) ?? []
+            let incomesData = (dict["incomes"] as? [[String: Any]]) ?? []
+            let expensesData = (dict["expenses"] as? [[String: Any]]) ?? []
+            let propertiesData = (dict["properties"] as? [[String: Any]]) ?? []
+            let payoutsData = (dict["payouts"] as? [[String: Any]]) ?? []
 
-        // 导入杂项支出
-        if let expenses = dict["expenses"] as? [[String: Any]] {
-            for exp in expenses {
-                let expense = MiscExpense(
-                    date: parseDate( exp["date"] as? String ?? "") ?? Date(),
-                    item: exp["item"] as? String ?? "",
-                    amount: exp["amount"] as? Double ?? 0,
-                    notes: exp["notes"] as? String ?? ""
-                )
-                modelContext.insert(expense)
-            }
-        }
-
-        // 导入房源
-        if let properties = dict["properties"] as? [[String: Any]] {
-            for p in properties {
-                let prop = Property(
-                    roomNumber: p["roomNumber"] as? String ?? "",
-                    landlord: p["landlord"] as? String ?? "",
-                    unitType: p["unitType"] as? String ?? "",
-                    rent: p["rent"] as? Double ?? 0,
-                    deposit: p["deposit"] as? Double ?? 0,
-                    prepayment: p["prepayment"] as? Double ?? 0,
-                    leaseStart: p["leaseStart"] as? String ?? "",
-                    leaseEnd: p["leaseEnd"] as? String ?? "",
-                    leaseDuration: p["leaseDuration"] as? String ?? "",
-                    rentDueDay: p["rentDueDay"] as? Int ?? 1,
-                    waterMeterBase: p["waterMeterBase"] as? Int ?? 0,
-                    electricMeterBase: p["electricMeterBase"] as? Int ?? 0,
-                    propertyType: p["propertyType"] as? String ?? "管理",
-                    notes: p["notes"] as? String ?? ""
-                )
-                if let monthly = p["monthlyRentRecords"] as? [[String: Any]] {
-                    for m in monthly {
-                        let rec = RentMonthRecord(month: m["month"] as? Int ?? 1, amount: m["amount"] as? Double ?? 0, isPaid: m["isPaid"] as? Bool ?? false)
-                        prop.monthlyRentRecords.append(rec)
-                    }
+            // 回到主线程操作SwiftData
+            DispatchQueue.main.async {
+                // 清空现有数据 - 分别fetch再delete
+                if let deals = try? modelContext.fetch(FetchDescriptor<DealRecord>()) {
+                    for item in deals { modelContext.delete(item) }
                 }
-                if let quarterly = p["quarterlyUtilityRecords"] as? [[String: Any]] {
-                    for q in quarterly {
-                        let rec = UtilityQuarterRecord(quarter: q["quarter"] as? Int ?? 1, electricAmount: q["electricAmount"] as? Double ?? 0, waterAmount: q["waterAmount"] as? Double ?? 0, isSettled: q["isSettled"] as? Bool ?? false)
-                        prop.quarterlyUtilityRecords.append(rec)
-                    }
+                if let incomes = try? modelContext.fetch(FetchDescriptor<MiscIncome>()) {
+                    for item in incomes { modelContext.delete(item) }
                 }
-                modelContext.insert(prop)
+                if let expenses = try? modelContext.fetch(FetchDescriptor<MiscExpense>()) {
+                    for item in expenses { modelContext.delete(item) }
+                }
+                if let properties = try? modelContext.fetch(FetchDescriptor<Property>()) {
+                    for item in properties { modelContext.delete(item) }
+                }
+                if let payouts = try? modelContext.fetch(FetchDescriptor<PayoutRecord>()) {
+                    for item in payouts { modelContext.delete(item) }
+                }
+                try? modelContext.save()
+
+                // 逐条导入
+                for d in dealsData {
+                    let deal = DealRecord(
+                        date: self.parseDate(d["date"] as? String),
+                        roomNumber: self.strVal(d["roomNumber"]),
+                        landlord: self.strVal(d["landlord"]),
+                        unitType: self.strVal(d["unitType"]),
+                        leaseStart: self.parseDate(d["leaseStart"] as? String),
+                        leaseEnd: self.parseDate(d["leaseEnd"] as? String),
+                        leaseDuration: self.strVal(d["leaseDuration"]),
+                        rent: self.dbl(d["rent"]),
+                        deposit: self.dbl(d["deposit"]),
+                        prepayment: self.dbl(d["prepayment"]),
+                        rentDueDay: d["rentDueDay"] as? Int,
+                        agentFeeLandlord: self.dbl(d["agentFeeLandlord"]),
+                        agentFeeTenant: self.dbl(d["agentFeeTenant"]),
+                        totalFee: self.dbl(d["totalFee"]),
+                        manager: self.strVal(d["manager"]),
+                        source: self.strVal(d["source"]),
+                        notes: self.strVal(d["notes"])
+                    )
+                    modelContext.insert(deal)
+                }
+
+                for inc in incomesData {
+                    let income = MiscIncome(
+                        date: self.parseDate(inc["date"] as? String),
+                        item: self.strVal(inc["item"]),
+                        amount: self.dbl(inc["amount"]),
+                        notes: self.strVal(inc["notes"])
+                    )
+                    modelContext.insert(income)
+                }
+
+                for exp in expensesData {
+                    let expense = MiscExpense(
+                        date: self.parseDate(exp["date"] as? String),
+                        item: self.strVal(exp["item"]),
+                        amount: self.dbl(exp["amount"]),
+                        notes: self.strVal(exp["notes"])
+                    )
+                    modelContext.insert(expense)
+                }
+
+                for p in propertiesData {
+                    let prop = Property(
+                        roomNumber: self.strVal(p["roomNumber"]),
+                        landlord: self.strVal(p["landlord"]),
+                        unitType: self.strVal(p["unitType"]),
+                        rent: self.dbl(p["rent"]),
+                        deposit: self.dbl(p["deposit"]),
+                        prepayment: self.dbl(p["prepayment"]),
+                        leaseStart: self.strVal(p["leaseStart"]),
+                        leaseEnd: self.strVal(p["leaseEnd"]),
+                        leaseDuration: self.strVal(p["leaseDuration"]),
+                        rentDueDay: self.intVal(p["rentDueDay"]),
+                        waterMeterBase: self.intVal(p["waterMeterBase"]),
+                        electricMeterBase: self.intVal(p["electricMeterBase"]),
+                        propertyType: self.strVal(p["propertyType"]),
+                        notes: self.strVal(p["notes"])
+                    )
+                    if let monthly = p["monthlyRentRecords"] as? [[String: Any]] {
+                        for m in monthly {
+                            let rec = RentMonthRecord(month: self.intVal(m["month"]), amount: self.dbl(m["amount"]), isPaid: m["isPaid"] as? Bool ?? false)
+                            prop.monthlyRentRecords.append(rec)
+                        }
+                    }
+                    if let quarterly = p["quarterlyUtilityRecords"] as? [[String: Any]] {
+                        for q in quarterly {
+                            let rec = UtilityQuarterRecord(quarter: self.intVal(q["quarter"]), electricAmount: self.dbl(q["electricAmount"]), waterAmount: self.dbl(q["waterAmount"]), isSettled: q["isSettled"] as? Bool ?? false)
+                            prop.quarterlyUtilityRecords.append(rec)
+                        }
+                    }
+                    modelContext.insert(prop)
+                }
+
+                for p in payoutsData {
+                    let payout = PayoutRecord(
+                        roomNumber: self.strVal(p["roomNumber"]),
+                        manager: self.strVal(p["manager"]),
+                        unitType: self.strVal(p["unitType"]),
+                        leaseStartDate: self.parseDate(p["leaseStartDate"] as? String),
+                        leaseEndDate: self.parseDate(p["leaseEndDate"] as? String),
+                        leaseDuration: self.strVal(p["leaseDuration"]),
+                        rentFreeDays: self.intVal(p["rentFreeDays"]),
+                        annualRent: self.dbl(p["annualRent"]),
+                        deposit: self.dbl(p["deposit"]),
+                        waterMeterBase: self.intVal(p["waterMeterBase"]),
+                        paymentMethod: self.strVal(p["paymentMethod"]),
+                        notes: self.strVal(p["notes"])
+                    )
+                    if let monthly = p["monthlyPayouts"] as? [[String: Any]] {
+                        for m in monthly {
+                            let rec = PayoutMonthRecord(month: self.intVal(m["month"]), amount: self.dbl(m["amount"]), isPaid: m["isPaid"] as? Bool ?? false)
+                            payout.monthlyPayouts.append(rec)
+                        }
+                    }
+                    modelContext.insert(payout)
+                }
+
+                do {
+                    try modelContext.save()
+                    completion(true)
+                } catch {
+                    print("Save error: \(error)")
+                    completion(false)
+                }
             }
         }
-
-        // 导入包租
-        if let payouts = dict["payouts"] as? [[String: Any]] {
-            for p in payouts {
-                let payout = PayoutRecord(
-                    roomNumber: p["roomNumber"] as? String ?? "",
-                    manager: p["manager"] as? String ?? "",
-                    unitType: p["unitType"] as? String ?? "",
-                    leaseStartDate: parseDate( p["leaseStartDate"] as? String ?? "") ?? Date(),
-                    leaseEndDate: parseDate( p["leaseEndDate"] as? String ?? "") ?? Date(),
-                    leaseDuration: p["leaseDuration"] as? String ?? "",
-                    rentFreeDays: p["rentFreeDays"] as? Int ?? 0,
-                    annualRent: p["annualRent"] as? Double ?? 0,
-                    deposit: p["deposit"] as? Double ?? 0,
-                    waterMeterBase: p["waterMeterBase"] as? Int ?? 0,
-                    paymentMethod: p["paymentMethod"] as? String ?? "月付",
-                    notes: p["notes"] as? String ?? ""
-                )
-                if let monthly = p["monthlyPayouts"] as? [[String: Any]] {
-                    for m in monthly {
-                        let rec = PayoutMonthRecord(month: m["month"] as? Int ?? 1, amount: m["amount"] as? Double ?? 0, isPaid: m["isPaid"] as? Bool ?? false)
-                        payout.monthlyPayouts.append(rec)
-                    }
-                }
-                modelContext.insert(payout)
-            }
-        }
-
-        try? modelContext.save()
-        return true
     }
 
     // 从bundle中的initialData.json导入初始数据
-    func importInitialData(modelContext: ModelContext) -> Bool {
+    func importInitialData(modelContext: ModelContext, completion: @escaping (Bool) -> Void) {
         guard let url = Bundle.main.url(forResource: "initialData", withExtension: "json"),
               let data = try? Data(contentsOf: url) else {
             print("initialData.json not found in bundle")
-            return false
+            completion(false)
+            return
         }
-        return importAllData(from: data, modelContext: modelContext)
+        importAllData(from: data, modelContext: modelContext, completion: completion)
     }
 }
 
 // 自动备份设置
 struct AutoBackupSettings: Codable {
     var enabled: Bool = false
-    var frequency: String = "day" // day, week, month
+    var frequency: String = "day"
     var hour: Int = 23
     var minute: Int = 0
     var lastBackupDate: Date?

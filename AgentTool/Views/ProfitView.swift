@@ -51,7 +51,7 @@ struct ProfitView: View {
             let agentFee = monthDeals.reduce(0) { $0 + $1.totalFee }
             let miscIncome = monthIncomes.reduce(0) { $0 + $1.amount }
             let miscExpense = monthExpenses.reduce(0) { $0 + $1.amount }
-            if targetMonth != nil || monthDeals.count > 0 || monthIncomes.count > 0 || monthExpenses.count > 0 {
+            if monthDeals.count > 0 || monthIncomes.count > 0 || monthExpenses.count > 0 {
                 summaries.append(MonthlySummary(
                     month: month,
                     dealCount: monthDeals.count,
