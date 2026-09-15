@@ -221,13 +221,64 @@ struct PayoutRow: View {
         payout.monthlyUtilityRecords.filter { $0.isSettled }.reduce(0) { $0 + $1.waterAmount + $1.electricAmount }
     }
 
+    // 根据付款方式计算付款期数
+    private var periodCount: Int {
+        switch payout.paymentMethod {
+        case "季付": return 4
+        case "半年付": return 2
+        case "年付": return 1
+        default: return 12
+        }
+    }
+
+    // 根据付款方式获取每期对应的月份
+    private func periodMonth(for index: Int) -> Int {
+        switch payout.paymentMethod {
+        case "季付": return (index + 1) * 3
+        case "半年付": return (index + 1) * 6
+        case "年付": return 12
+        default: return index + 1
+        }
+    }
+
+    // 下次打租信息
+    private var nextPayout: (month: Int, amount: Double)? {
+        for i in 0..<periodCount {
+            let month = periodMonth(for: i)
+            if let record = payout.monthlyPayouts.first(where: { $0.month == month }), !record.isPaid {
+                return (month, record.amount)
+            } else if payout.monthlyPayouts.first(where: { $0.month == month }) == nil {
+                // 没有记录说明还未付，计算默认金额
+                let defaultAmount = calculatePeriodAmount(for: i)
+                return (month, defaultAmount)
+            }
+        }
+        return nil
+    }
+
+    // 根据免租期计算每期金额
+    private func calculatePeriodAmount(for index: Int) -> Double {
+        let monthlyRent = payout.annualRent / 12.0
+        let rentFreeDays = payout.rentFreeDays
+        let periodMonths = 12 / periodCount
+
+        if index == 0 && rentFreeDays > 0 {
+            // 第一期扣除免租期
+            let totalDays = periodMonths * 30
+            let freeDays = min(rentFreeDays, totalDays)
+            let payableDays = totalDays - freeDays
+            return (monthlyRent / 30.0) * Double(payableDays)
+        }
+        return monthlyRent * Double(periodMonths)
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 5) {
                 // 第一行：房号 + 户型 + 付款方式
                 HStack(spacing: 6) {
                     Text(payout.roomNumber)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.themeText)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
@@ -275,7 +326,27 @@ struct PayoutRow: View {
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
                 }
-                // 第三行：备注
+                // 第三行：下次打租金额
+                if let next = nextPayout {
+                    HStack(spacing: 0) {
+                        Text("下次\(next.month)月\(payout.rentDueDay)号应付：")
+                            .font(.system(size: 10))
+                            .foregroundColor(.white)
+                        Text("\(Int(next.amount))")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white)
+                        Text("元")
+                            .font(.system(size: 10))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.themeAccentDark)
+                    .cornerRadius(.infinity)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                }
+                // 第四行：备注
                 if !payout.notes.isEmpty {
                     Text(payout.notes)
                         .font(.system(size: 11))
@@ -370,9 +441,25 @@ struct PayoutDetailView: View {
         }
     }
 
-    // 根据付款方式计算每期金额
+    // 根据付款方式计算每期金额（默认，不考虑免租期）
     private var periodAmount: Double {
         periodCount > 0 ? payout.annualRent / Double(periodCount) : 0
+    }
+
+    // 根据免租期计算每期金额（第一期扣除免租期）
+    private func calculatePeriodAmount(for index: Int) -> Double {
+        let monthlyRent = payout.annualRent / 12.0
+        let rentFreeDays = payout.rentFreeDays
+        let periodMonths = 12 / periodCount
+
+        if index == 0 && rentFreeDays > 0 {
+            // 第一期扣除免租期（自然月按30天算）
+            let totalDays = periodMonths * 30
+            let freeDays = min(rentFreeDays, totalDays)
+            let payableDays = totalDays - freeDays
+            return (monthlyRent / 30.0) * Double(payableDays)
+        }
+        return monthlyRent * Double(periodMonths)
     }
 
     // 根据付款方式获取每期对应的月份（用于关联monthlyPayouts）
@@ -416,7 +503,8 @@ struct PayoutDetailView: View {
                 Section("打租计划（\(payout.paymentMethod)，共\(periodCount)期）") {
                     ForEach(0..<periodCount, id: \.self) { idx in
                         let month = periodMonth(for: idx)
-                        MonthPayoutRow(payout: payout, month: month, label: periodLabel(for: idx), defaultAmount: periodAmount)
+                        let amount = calculatePeriodAmount(for: idx)
+                        MonthPayoutRow(payout: payout, month: month, label: periodLabel(for: idx), defaultAmount: amount)
                     }
                 }
 
@@ -463,7 +551,11 @@ struct MonthPayoutRow: View {
 
     var body: some View {
         HStack {
-            Text(label).foregroundColor(.themeText).frame(width: 40, alignment: .leading)
+            Text(label)
+                .foregroundColor(.themeText)
+                .frame(width: 55, alignment: .leading)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             Spacer()
             TextField("金额", text: $amountText)
                 .keyboardType(.decimalPad)
@@ -576,6 +668,7 @@ struct AddPayoutView: View {
     @State private var leaseDuration: String
     @State private var rentFreeDaysText: String
     @State private var annualRentText: String
+    @State private var monthlyRentText: String
     @State private var depositText: String
     @State private var waterMeterText: String
     @State private var electricMeterText: String
@@ -596,6 +689,7 @@ struct AddPayoutView: View {
         _leaseDuration = State(initialValue: payout?.leaseDuration ?? "")
         _rentFreeDaysText = State(initialValue: payout.map { $0.rentFreeDays > 0 ? String($0.rentFreeDays) : "" } ?? "")
         _annualRentText = State(initialValue: payout.map { $0.annualRent > 0 ? String(Int($0.annualRent)) : "" } ?? "")
+        _monthlyRentText = State(initialValue: payout.map { $0.annualRent > 0 ? String(Int($0.annualRent / 12)) : "" } ?? "")
         _depositText = State(initialValue: payout.map { $0.deposit > 0 ? String(Int($0.deposit)) : "" } ?? "")
         _waterMeterText = State(initialValue: payout.map { $0.waterMeterBase > 0 ? String($0.waterMeterBase) : "" } ?? "")
         _electricMeterText = State(initialValue: payout.map { $0.electricMeterBase > 0 ? String($0.electricMeterBase) : "" } ?? "")
@@ -622,6 +716,19 @@ struct AddPayoutView: View {
                 }
                 Section("金额") {
                     AmountField(label: "年租金", text: $annualRentText)
+                        .onChange(of: annualRentText) { _, _ in
+                            let annual = Double(annualRentText) ?? 0
+                            if annual > 0 {
+                                monthlyRentText = String(Int(annual / 12))
+                            }
+                        }
+                    AmountField(label: "月租金", text: $monthlyRentText)
+                        .onChange(of: monthlyRentText) { _, _ in
+                            let monthly = Double(monthlyRentText) ?? 0
+                            if monthly > 0 {
+                                annualRentText = String(Int(monthly * 12))
+                            }
+                        }
                     AmountField(label: "押金", text: $depositText)
                     Picker("交租日", selection: $rentDueDay) { ForEach(1...31, id: \.self) { Text("\($0)号").tag($0) } }
                 }

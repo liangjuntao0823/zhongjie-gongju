@@ -361,7 +361,7 @@ struct PropertyRentRow: View {
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
                     if !property.landlord.isEmpty {
-                        Text("房东：\(property.landlord)")
+                        Text(property.landlord)
                             .font(.system(size: 12))
                             .foregroundColor(.themeText2)
                             .padding(.horizontal, 10)
