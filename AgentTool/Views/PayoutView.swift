@@ -490,6 +490,7 @@ struct PayoutDetailView: View {
                     LabeledContent("管理", value: payout.manager)
                     LabeledContent("户型", value: payout.unitType)
                     LabeledContent("年租金", value: "¥\(Int(payout.annualRent))")
+                    LabeledContent("月租金", value: "¥\(Int(payout.annualRent / 12))")
                     LabeledContent("押金", value: "¥\(Int(payout.deposit))")
                     LabeledContent("付款方式", value: payout.paymentMethod)
                     LabeledContent("交租日", value: "每月\(payout.rentDueDay)号")
@@ -544,7 +545,13 @@ struct MonthPayoutRow: View {
         self.label = label
         self.defaultAmount = defaultAmount
         let record = payout.monthlyPayouts.first { $0.month == month }
-        let amt = record?.amount ?? defaultAmount
+        // 已付款的记录保持原金额，未付款的使用最新计算金额（免租期变动自动更新）
+        let amt: Double
+        if let record = record, record.isPaid {
+            amt = record.amount
+        } else {
+            amt = defaultAmount
+        }
         _amountText = State(initialValue: amt > 0 ? String(Int(amt)) : "")
         _isPaid = State(initialValue: record?.isPaid ?? false)
     }

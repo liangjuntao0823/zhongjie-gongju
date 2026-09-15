@@ -349,7 +349,7 @@ struct PropertyRentRow: View {
             }
 
             VStack(alignment: .leading, spacing: 5) {
-                // 第一行：房号 + 房东
+                // 第一行：房号 + 租金
                 HStack(spacing: 6) {
                     Text(property.roomNumber)
                         .font(.system(size: 14, weight: .semibold))
@@ -357,6 +357,27 @@ struct PropertyRentRow: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
                         .background(Color(hex: "F0F0F0"))
+                        .cornerRadius(.infinity)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                    Text("租/\(Int(property.rent))")
+                        .font(.system(size: 12))
+                        .foregroundColor(.themeText2)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color(hex: "FFF3E0"))
+                        .cornerRadius(.infinity)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                }
+                // 第二行：交租日 + 房东 + 预存
+                HStack(spacing: 6) {
+                    Text("\(property.rentDueDay)号")
+                        .font(.system(size: 12))
+                        .foregroundColor(.themeText2)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color(hex: "FDF0F0"))
                         .cornerRadius(.infinity)
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
@@ -368,24 +389,9 @@ struct PropertyRentRow: View {
                             .padding(.vertical, 4)
                             .background(Color(hex: "E8F0FE"))
                             .cornerRadius(.infinity)
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
-                }
-                // 第二行：交租日 + 租金 + 预存
-                HStack(spacing: 6) {
-                    Text("\(property.rentDueDay)号")
-                        .font(.system(size: 12))
-                        .foregroundColor(.themeText2)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Color(hex: "FDF0F0"))
-                        .cornerRadius(.infinity)
-                    Text("租/\(Int(property.rent))")
-                        .font(.system(size: 12))
-                        .foregroundColor(.themeText2)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Color(hex: "FFF3E0"))
-                        .cornerRadius(.infinity)
                     if property.prepayment > 0 {
                         Text("预/\(Int(property.prepayment))")
                             .font(.system(size: 12))
@@ -394,6 +400,8 @@ struct PropertyRentRow: View {
                             .padding(.vertical, 4)
                             .background(Color(hex: "E8F5E9"))
                             .cornerRadius(.infinity)
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                 }
                 // 第三行：租期
