@@ -21,7 +21,9 @@ struct RentCollectionView: View {
     }
 
     private var filteredProperties: [Property] {
-        properties.filter { prop in
+        let currentMonth = Calendar.current.component(.month, from: Date())
+        let currentDay = Calendar.current.component(.day, from: Date())
+        return properties.filter { prop in
             let dayMatch = selectedDueDay == nil || prop.rentDueDay == selectedDueDay
             let searchMatch = searchText.isEmpty ||
                 prop.roomNumber.localizedCaseInsensitiveContains(searchText) ||
@@ -30,6 +32,20 @@ struct RentCollectionView: View {
                 prop.propertyType.localizedCaseInsensitiveContains(searchText) ||
                 prop.notes.localizedCaseInsensitiveContains(searchText)
             return dayMatch && searchMatch
+        }.sorted { a, b in
+            // 判断本月是否已收租
+            let aPaid = a.monthlyRentRecords.contains { $0.month == currentMonth && $0.isPaid }
+            let bPaid = b.monthlyRentRecords.contains { $0.month == currentMonth && $0.isPaid }
+            // 未收租的优先
+            if aPaid != bPaid { return !aPaid && bPaid }
+            // 都未收租：离交租日近的排前面
+            if !aPaid && !bPaid {
+                let aDays = a.rentDueDay >= currentDay ? a.rentDueDay - currentDay : a.rentDueDay + 30 - currentDay
+                let bDays = b.rentDueDay >= currentDay ? b.rentDueDay - currentDay : b.rentDueDay + 30 - currentDay
+                return aDays < bDays
+            }
+            // 都已收租：按房号排序
+            return a.roomNumber < b.roomNumber
         }
     }
 
@@ -322,30 +338,55 @@ struct PropertyRentRow: View {
                     .foregroundColor(property.typeColor)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 5) {
+                // 第一行：房号 + 房东
                 HStack(spacing: 6) {
                     Text(property.roomNumber)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.themeText)
-                    Text(property.unitType)
-                        .font(.system(size: 11))
-                        .foregroundColor(.themeText3)
-                    // 所有房源都显示类型标签
-                    Text(property.typeDisplayName)
-                        .font(.system(size: 10))
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(property.typeBgColor)
-                        .foregroundColor(property.typeColor)
-                        .cornerRadius(4)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color(hex: "F0F0F0"))
+                        .cornerRadius(.infinity)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                    if !property.landlord.isEmpty {
+                        Text("房东：\(property.landlord)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.themeText2)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color(hex: "E8F0FE"))
+                            .cornerRadius(.infinity)
+                    }
                 }
-                HStack(spacing: 8) {
-                    Text("房东: \(property.landlord)")
-                        .font(.system(size: 11)).foregroundColor(.themeText2)
-                    Text("¥\(Int(property.rent))/月")
-                        .font(.system(size: 11)).foregroundColor(.themeText2)
-                    Text("每月\(property.rentDueDay)号")
-                        .font(.system(size: 11)).foregroundColor(.themeText2)
+                // 第二行：交租日 + 租金 + 预存
+                HStack(spacing: 6) {
+                    Text("\(property.rentDueDay)号交租")
+                        .font(.system(size: 12))
+                        .foregroundColor(.themeText2)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color(hex: "FDF0F0"))
+                        .cornerRadius(.infinity)
+                    Text("月租¥\(Int(property.rent))")
+                        .font(.system(size: 12))
+                        .foregroundColor(.themeText2)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color(hex: "FFF3E0"))
+                        .cornerRadius(.infinity)
+                    if property.prepayment > 0 {
+                        Text("预存¥\(Int(property.prepayment))")
+                            .font(.system(size: 12))
+                            .foregroundColor(.themeText2)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color(hex: "E8F5E9"))
+                            .cornerRadius(.infinity)
+                    }
                 }
+                // 第三行：租期
                 HStack(spacing: 6) {
                     Text(property.leaseStart.isEmpty ? "未出租" : "\(property.leaseStart) 至 \(property.leaseEnd)")
                         .font(.system(size: 10))
@@ -360,10 +401,18 @@ struct PropertyRentRow: View {
             Spacer()
 
             // 右侧：已收月数 + 累计水电 + 收租状态
-            VStack(alignment: .trailing, spacing: 3) {
-                Text("已收\(paidMonthsCount)个月")
-                    .font(.system(size: 10.5))
-                    .foregroundColor(.themeText2)
+            VStack(alignment: .trailing, spacing: 4) {
+                HStack(spacing: 0) {
+                    Text("已收")
+                        .font(.system(size: 10.5))
+                        .foregroundColor(.themeText2)
+                    Text("\(paidMonthsCount)")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.themeAccentDark)
+                    Text("个月")
+                        .font(.system(size: 10.5))
+                        .foregroundColor(.themeText2)
+                }
                 Text("累计水电¥\(Int(totalUtility))")
                     .font(.system(size: 10.5))
                     .foregroundColor(.themeText2)
@@ -390,9 +439,20 @@ struct PropertyDetailView: View {
     @Environment(\.dismiss) private var dismiss
     let property: Property
     @State private var currentMonth = Calendar.current.component(.month, from: Date())
+    @State private var shareImage: UIImage?
+    @State private var showShareSheet = false
 
     private let months = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"]
     private let quarters = ["1季度","2季度","3季度","4季度"]
+
+    private func generateShareImage() {
+        let renderer = ImageRenderer(content: ShareDetailRenderView(property: property))
+        renderer.scale = UIScreen.main.scale
+        if let image = renderer.uiImage {
+            shareImage = image
+            showShareSheet = true
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -433,7 +493,22 @@ struct PropertyDetailView: View {
             .background(Color.themeBg)
             .navigationTitle(property.roomNumber)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() }.foregroundColor(.themeAccent) } }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        generateShareImage()
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundColor(.themeAccent)
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() }.foregroundColor(.themeAccent) }
+            }
+            .sheet(isPresented: $showShareSheet) {
+                if let image = shareImage {
+                    ActivityView(activityItems: [image])
+                }
+            }
         }
     }
 }
@@ -687,4 +762,139 @@ struct AddPropertyView: View {
             }
         }
     }
+}
+
+// MARK: - 分享用渲染视图（剔除敏感信息）
+struct ShareDetailRenderView: View {
+    let property: Property
+
+    private var paidMonthsCount: Int {
+        property.monthlyRentRecords.filter { $0.isPaid }.count
+    }
+
+    private var totalUtility: Double {
+        property.quarterlyUtilityRecords.reduce(0) { $0 + $1.electricAmount + $1.waterAmount }
+    }
+
+    private var shareTime: String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd HH:mm"
+        return fmt.string(from: Date())
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // 顶部栏
+            HStack {
+                Text("系统记录，仅供参考")
+                    .font(.system(size: 11))
+                    .foregroundColor(.themeText3)
+                Spacer()
+                Text(shareTime)
+                    .font(.system(size: 11))
+                    .foregroundColor(.themeText3)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color(hex: "F5F5F5"))
+
+            // 房号标题
+            Text(property.roomNumber)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.themeText)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
+
+            // 房源信息（剔除房东、房源类型、备注）
+            VStack(spacing: 8) {
+                shareRow(label: "户型", value: property.unitType)
+                shareRow(label: "租金", value: "¥\(Int(property.rent))/月")
+                shareRow(label: "押金", value: "¥\(Int(property.deposit))")
+                if property.prepayment > 0 {
+                    shareRow(label: "预存", value: "¥\(Int(property.prepayment))")
+                }
+                shareRow(label: "租期", value: property.leaseStart.isEmpty ? "未出租" : "\(property.leaseStart) 至 \(property.leaseEnd)")
+                shareRow(label: "交租日", value: "每月\(property.rentDueDay)号")
+            }
+            .padding(.horizontal, 16)
+
+            // 收租统计
+            HStack(spacing: 20) {
+                VStack(spacing: 4) {
+                    Text("\(paidMonthsCount)")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(.themeAccentDark)
+                    Text("已收月数")
+                        .font(.system(size: 11))
+                        .foregroundColor(.themeText3)
+                }
+                VStack(spacing: 4) {
+                    Text("¥\(Int(totalUtility))")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(.themeAmber)
+                    Text("累计水电")
+                        .font(.system(size: 11))
+                        .foregroundColor(.themeText3)
+                }
+            }
+            .padding(.vertical, 16)
+
+            // 月度收租记录
+            VStack(alignment: .leading, spacing: 6) {
+                Text("月度收租记录")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.themeText)
+                    .padding(.bottom, 4)
+                ForEach(0..<12, id: \.self) { idx in
+                    let month = idx + 1
+                    if let record = property.monthlyRentRecords.first(where: { $0.month == month }) {
+                        HStack {
+                            Text("\(month)月")
+                                .font(.system(size: 11))
+                                .foregroundColor(.themeText2)
+                                .frame(width: 40, alignment: .leading)
+                            Text("¥\(Int(record.amount))")
+                                .font(.system(size: 11))
+                                .foregroundColor(.themeText2)
+                                .frame(width: 70, alignment: .leading)
+                            Image(systemName: record.isPaid ? "checkmark.circle.fill" : "circle")
+                                .foregroundColor(record.isPaid ? .themeAccent : .themeText3)
+                                .font(.system(size: 14))
+                            Spacer()
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 20)
+        }
+        .background(Color.white)
+        .frame(width: 350)
+    }
+
+    private func shareRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundColor(.themeText3)
+                .frame(width: 60, alignment: .leading)
+            Text(value)
+                .font(.system(size: 12))
+                .foregroundColor(.themeText)
+            Spacer()
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+// MARK: - UIActivityViewController包装
+struct ActivityView: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

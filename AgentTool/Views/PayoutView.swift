@@ -219,34 +219,82 @@ struct PayoutRow: View {
                     .foregroundColor(Color(hex: "6B3FA0"))
                     .font(.system(size: 18))
             }
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 5) {
+                // 第一行：房号 + 户型 + 付款方式
                 HStack(spacing: 6) {
                     Text(payout.roomNumber)
-                        .font(.system(size: 14, weight: .semibold)).foregroundColor(.themeText)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.themeText)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color(hex: "F0F0F0"))
+                        .cornerRadius(.infinity)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                     Text(payout.unitType)
-                        .font(.system(size: 11)).foregroundColor(.themeText3)
+                        .font(.system(size: 11))
+                        .foregroundColor(.themeText2)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color(hex: "E3F2FD"))
+                        .cornerRadius(.infinity)
                     Text(payout.paymentMethod)
-                        .font(.system(size: 10)).padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Color(hex: "F0E8FE")).foregroundColor(Color(hex: "6B3FA0")).cornerRadius(4)
+                        .font(.system(size: 10))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color(hex: "F0E8FE"))
+                        .foregroundColor(Color(hex: "6B3FA0"))
+                        .cornerRadius(.infinity)
                 }
-                HStack(spacing: 8) {
-                    Text("管理: \(payout.manager)").font(.system(size: 11)).foregroundColor(.themeText2)
-                    Text("年租金: ¥\(Int(payout.annualRent))").font(.system(size: 11)).foregroundColor(.themeText2)
+                // 第二行：管理 + 年租金
+                HStack(spacing: 6) {
+                    Text("管理：\(payout.manager)")
+                        .font(.system(size: 12))
+                        .foregroundColor(.themeText2)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color(hex: "E8F0FE"))
+                        .cornerRadius(.infinity)
+                    Text("年租¥\(Int(payout.annualRent))")
+                        .font(.system(size: 12))
+                        .foregroundColor(.themeText2)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color(hex: "FFF3E0"))
+                        .cornerRadius(.infinity)
                 }
-                if payout.rentFreeDays > 0 {
-                    Text("免租期: \(payout.rentFreeDays)天")
-                        .font(.system(size: 10)).foregroundColor(.themeAmber)
-                }
-                if !payout.notes.isEmpty {
-                    Text(payout.notes).font(.system(size: 10)).foregroundColor(.themeText3).lineLimit(1)
+                // 第三行：免租期 + 备注
+                HStack(spacing: 6) {
+                    if payout.rentFreeDays > 0 {
+                        Text("免租\(payout.rentFreeDays)天")
+                            .font(.system(size: 11))
+                            .foregroundColor(.themeAmber)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 3)
+                            .background(Color(hex: "FFF8E1"))
+                            .cornerRadius(.infinity)
+                    }
+                    if !payout.notes.isEmpty {
+                        Text(payout.notes)
+                            .font(.system(size: 11))
+                            .foregroundColor(.themeText2)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 3)
+                            .background(Color(hex: "F3E5F5"))
+                            .cornerRadius(.infinity)
+                            .lineLimit(1)
+                    }
                 }
             }
             Spacer()
             let paidCount = payout.monthlyPayouts.filter { $0.isPaid }.count
             VStack(alignment: .trailing, spacing: 4) {
-                Text("\(paidCount)/12月").font(.system(size: 12)).foregroundColor(.themeText2)
+                Text("\(paidCount)/12月")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.themeText2)
                 Text("已打¥\(Int(payout.monthlyPayouts.filter { $0.isPaid }.reduce(0) { $0 + $1.amount }))")
-                    .font(.system(size: 11)).foregroundColor(Color(hex: "6B3FA0"))
+                    .font(.system(size: 11))
+                    .foregroundColor(Color(hex: "6B3FA0"))
             }
         }
         .padding(14)
