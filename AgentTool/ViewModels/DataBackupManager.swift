@@ -126,44 +126,43 @@ class DataBackupManager {
         return try? JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
     }
 
-    // 异步导入数据（清空后导入），避免主线程阻塞
+    // 分批导入数据，避免主线程阻塞导致闪退
     func importAllData(from data: Data, modelContext: ModelContext, completion: @escaping (Bool) -> Void) {
         guard let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             completion(false)
             return
         }
 
-        // 在后台线程处理数据解析
-        DispatchQueue.global(qos: .userInitiated).async {
-            // 先解析所有数据为Swift结构体
-            let dealsData = (dict["deals"] as? [[String: Any]]) ?? []
-            let incomesData = (dict["incomes"] as? [[String: Any]]) ?? []
-            let expensesData = (dict["expenses"] as? [[String: Any]]) ?? []
-            let propertiesData = (dict["properties"] as? [[String: Any]]) ?? []
-            let payoutsData = (dict["payouts"] as? [[String: Any]]) ?? []
+        let dealsData = (dict["deals"] as? [[String: Any]]) ?? []
+        let incomesData = (dict["incomes"] as? [[String: Any]]) ?? []
+        let expensesData = (dict["expenses"] as? [[String: Any]]) ?? []
+        let propertiesData = (dict["properties"] as? [[String: Any]]) ?? []
+        let payoutsData = (dict["payouts"] as? [[String: Any]]) ?? []
 
-            // 回到主线程操作SwiftData
-            DispatchQueue.main.async {
-                // 清空现有数据 - 分别fetch再delete
-                if let deals = try? modelContext.fetch(FetchDescriptor<DealRecord>()) {
-                    for item in deals { modelContext.delete(item) }
-                }
-                if let incomes = try? modelContext.fetch(FetchDescriptor<MiscIncome>()) {
-                    for item in incomes { modelContext.delete(item) }
-                }
-                if let expenses = try? modelContext.fetch(FetchDescriptor<MiscExpense>()) {
-                    for item in expenses { modelContext.delete(item) }
-                }
-                if let properties = try? modelContext.fetch(FetchDescriptor<Property>()) {
-                    for item in properties { modelContext.delete(item) }
-                }
-                if let payouts = try? modelContext.fetch(FetchDescriptor<PayoutRecord>()) {
-                    for item in payouts { modelContext.delete(item) }
-                }
-                try? modelContext.save()
+        // 第一步：清空数据
+        func clearAndImport() {
+            if let deals = try? modelContext.fetch(FetchDescriptor<DealRecord>()) {
+                for item in deals { modelContext.delete(item) }
+            }
+            if let incomes = try? modelContext.fetch(FetchDescriptor<MiscIncome>()) {
+                for item in incomes { modelContext.delete(item) }
+            }
+            if let expenses = try? modelContext.fetch(FetchDescriptor<MiscExpense>()) {
+                for item in expenses { modelContext.delete(item) }
+            }
+            if let properties = try? modelContext.fetch(FetchDescriptor<Property>()) {
+                for item in properties { modelContext.delete(item) }
+            }
+            if let payouts = try? modelContext.fetch(FetchDescriptor<PayoutRecord>()) {
+                for item in payouts { modelContext.delete(item) }
+            }
+            try? modelContext.save()
 
-                // 逐条导入
-                for d in dealsData {
+            // 分批导入
+            var allItems: [() -> Void] = []
+
+            for d in dealsData {
+                allItems.append {
                     let deal = DealRecord(
                         date: self.parseDate(d["date"] as? String),
                         roomNumber: self.strVal(d["roomNumber"]),
@@ -185,8 +184,10 @@ class DataBackupManager {
                     )
                     modelContext.insert(deal)
                 }
+            }
 
-                for inc in incomesData {
+            for inc in incomesData {
+                allItems.append {
                     let income = MiscIncome(
                         date: self.parseDate(inc["date"] as? String),
                         item: self.strVal(inc["item"]),
@@ -195,8 +196,10 @@ class DataBackupManager {
                     )
                     modelContext.insert(income)
                 }
+            }
 
-                for exp in expensesData {
+            for exp in expensesData {
+                allItems.append {
                     let expense = MiscExpense(
                         date: self.parseDate(exp["date"] as? String),
                         item: self.strVal(exp["item"]),
@@ -205,8 +208,10 @@ class DataBackupManager {
                     )
                     modelContext.insert(expense)
                 }
+            }
 
-                for p in propertiesData {
+            for p in propertiesData {
+                allItems.append {
                     let prop = Property(
                         roomNumber: self.strVal(p["roomNumber"]),
                         landlord: self.strVal(p["landlord"]),
@@ -237,8 +242,10 @@ class DataBackupManager {
                     }
                     modelContext.insert(prop)
                 }
+            }
 
-                for p in payoutsData {
+            for p in payoutsData {
+                allItems.append {
                     let payout = PayoutRecord(
                         roomNumber: self.strVal(p["roomNumber"]),
                         manager: self.strVal(p["manager"]),
@@ -261,16 +268,30 @@ class DataBackupManager {
                     }
                     modelContext.insert(payout)
                 }
+            }
 
-                do {
-                    try modelContext.save()
+            // 分批执行，每批5条
+            let batchSize = 5
+            var index = 0
+            func processBatch() {
+                let end = min(index + batchSize, allItems.count)
+                for i in index..<end {
+                    allItems[i]()
+                }
+                try? modelContext.save()
+                index = end
+                if index < allItems.count {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+                        processBatch()
+                    }
+                } else {
                     completion(true)
-                } catch {
-                    print("Save error: \(error)")
-                    completion(false)
                 }
             }
+            processBatch()
         }
+
+        clearAndImport()
     }
 
     // 从bundle中的initialData.json导入初始数据
