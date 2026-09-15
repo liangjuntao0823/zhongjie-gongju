@@ -30,15 +30,15 @@ public struct CommentList: Codable, Equatable {
 
 public struct Comment: Codable, Equatable {
   public let reference: String
-  public let text: Text
+  public let XLSXText: XLSXText
 
   enum CodingKeys: String, CodingKey {
     case reference = "ref"
-    case text
+    case XLSXText
   }
 }
 
-public struct Text: Codable, Equatable {
+public struct XLSXText: Codable, Equatable {
   public let plain: String?
 
   enum CodingKeys: String, CodingKey {
