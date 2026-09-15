@@ -80,7 +80,7 @@ public struct RichText: Codable, Equatable {
     }
   }
 
-  public struct Color: Codable, Equatable {
+  public struct XLSXColor: Codable, Equatable {
     let theme: String?
     let rgb: String?
   }
@@ -95,14 +95,14 @@ public struct RichText: Codable, Equatable {
 
   public struct Properties: Codable, Equatable {
     public let size: Size?
-    public let color: Color?
+    public let XLSXColor: XLSXColor?
     public let font: Font?
     public let family: Family?
     public let scheme: Scheme?
 
     enum CodingKeys: String, CodingKey {
       case size = "sz"
-      case color
+      case XLSXColor
       case font = "rFont"
       case family
       case scheme

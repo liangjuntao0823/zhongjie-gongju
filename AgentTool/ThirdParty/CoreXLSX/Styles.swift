@@ -41,7 +41,7 @@ public struct Styles: Codable, Equatable {
   }
 }
 
-public struct Color: Codable, Equatable {
+public struct XLSXColor: Codable, Equatable {
   public let indexed: Int?
   public let auto: Int?
   public let rgb: String?
@@ -131,7 +131,7 @@ public struct Font: Codable, Equatable {
   }
 
   public let size: Size?
-  public let color: Color?
+  public let XLSXColor: XLSXColor?
   public let name: Name?
   public let bold: Bold?
   public let italic: Italic?
@@ -139,7 +139,7 @@ public struct Font: Codable, Equatable {
 
   enum CodingKeys: String, CodingKey {
     case size = "sz"
-    case color
+    case XLSXColor
     case name
     case bold = "b"
     case italic = "i"
@@ -148,14 +148,14 @@ public struct Font: Codable, Equatable {
 
   init(
     size: Size? = nil,
-    color: Color? = nil,
+    XLSXColor: XLSXColor? = nil,
     name: Name? = nil,
     bold: Bold? = nil,
     italic: Italic? = nil,
     strike: Strike? = nil
   ) {
     self.size = size
-    self.color = color
+    self.XLSXColor = XLSXColor
     self.name = name
     self.bold = bold
     self.italic = italic
@@ -179,8 +179,8 @@ public struct Fill: Codable, Equatable {
 
 public struct PatternFill: Codable, Equatable {
   public let patternType: String
-  public let foregroundColor: Color?
-  public let backgroundColor: Color?
+  public let foregroundColor: XLSXColor?
+  public let backgroundColor: XLSXColor?
 
   enum CodingKeys: String, CodingKey {
     case foregroundColor = "fgColor"
@@ -208,7 +208,7 @@ public struct Borders: Codable, Equatable {
 
 public struct Border: Codable, Equatable {
   public struct Value: Codable, Equatable {
-    public let color: Color?
+    public let XLSXColor: XLSXColor?
     public let style: String?
   }
 
@@ -353,7 +353,7 @@ public struct TableStyle: Codable, Equatable {
 
 public struct Colors: Codable, Equatable {
   public struct Indexed: Codable, Equatable {
-    public let rgbColors: [Color]
+    public let rgbColors: [XLSXColor]
 
     enum CodingKeys: String, CodingKey {
       case rgbColors = "rgbColor"
