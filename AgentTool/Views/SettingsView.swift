@@ -35,7 +35,13 @@ struct SettingsView: View {
                             Image(systemName: "chevron.right")
                                 .foregroundColor(.themeText3)
                         }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 14)
+                        .background(Color(hex: "F2F2F7"))
+                        .cornerRadius(12)
                     }
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
 
                     Button {
                         showRestoreList = true
@@ -50,7 +56,13 @@ struct SettingsView: View {
                             Image(systemName: "chevron.right")
                                 .foregroundColor(.themeText3)
                         }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 14)
+                        .background(Color(hex: "F2F2F7"))
+                        .cornerRadius(12)
                     }
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
 
                     Button {
                         showExcelConvert = true
@@ -65,7 +77,13 @@ struct SettingsView: View {
                             Image(systemName: "chevron.right")
                                 .foregroundColor(.themeText3)
                         }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 14)
+                        .background(Color(hex: "F2F2F7"))
+                        .cornerRadius(12)
                     }
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
 
                     Button {
                         showClearSheet = true
@@ -77,9 +95,16 @@ struct SettingsView: View {
                             Text("清空数据")
                                 .foregroundColor(.white)
                             Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.white.opacity(0.7))
                         }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 14)
+                        .background(Color.red)
+                        .cornerRadius(12)
                     }
-                    .listRowBackground(Color.red)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
 
                 Section("自动备份") {
@@ -117,28 +142,74 @@ struct SettingsView: View {
                         Spacer()
                         Text("中介管家").foregroundColor(.themeText2)
                     }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 14)
+                    .background(Color(hex: "F2F2F7"))
+                    .cornerRadius(12)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                     HStack {
                         Text("版本")
                         Spacer()
-                        Text("2.22").foregroundColor(.themeText2)
+                        Text("2.23").foregroundColor(.themeText2)
                     }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 14)
+                    .background(Color(hex: "F2F2F7"))
+                    .cornerRadius(12)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                     HStack {
                         Text("开发者")
                         Spacer()
                         Text("豆包And涛哥").foregroundColor(.themeText2)
                     }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 14)
+                    .background(Color(hex: "F2F2F7"))
+                    .cornerRadius(12)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                     HStack {
                         Text("软件说明")
                         Spacer()
                         Text("米兰公馆中介和二房东工作平台").foregroundColor(.themeText2)
                             .font(.system(size: 14))
                     }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 14)
+                    .background(Color(hex: "F2F2F7"))
+                    .cornerRadius(12)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                     HStack {
                         Text("数据安全")
                         Spacer()
                         Text("本地存储，纯单机无网络接口").foregroundColor(.themeText2)
                             .font(.system(size: 14))
                     }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 14)
+                    .background(Color(hex: "F2F2F7"))
+                    .cornerRadius(12)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+
+                    NavigationLink(destination: VersionHistoryView()) {
+                        HStack {
+                            Text("版本更新介绍")
+                                .foregroundColor(.themeText)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.themeText3)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 14)
+                        .background(Color(hex: "F2F2F7"))
+                        .cornerRadius(12)
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
             }
             .scrollContentBackground(.hidden)
@@ -411,6 +482,167 @@ struct ExcelConvertView: View {
             dismiss()
         } else {
             convertMessage = "保存失败"
+        }
+    }
+}
+
+// MARK: - 版本更新介绍
+struct VersionHistoryView: View {
+    let versions: [(version: String, date: String, changes: [String])] = [
+        ("v2.23", "2026-09-15", [
+            "设置页关于部分完善，新增开发者、软件说明、数据安全",
+            "汇总月度列表默认降序排列，最新月份在最前",
+            "汇总筛选默认显示全年数据",
+            "汇总KPI新布局：左边2x2，右边净总收入跨两行",
+            "净总收入统一配红色",
+            "汇总下方卡片净收入胶囊化，配色对应KPI",
+            "包租表单付款方式新增半年付、年付",
+            "成交卡片时间恢复显示并胶囊化"
+        ]),
+        ("v2.22", "2026-09-15", [
+            "备份数据新增分板块选择（成交/收租/包租/全部）",
+            "成交卡片胶囊化：房东、租金、押金、备注全部加底色",
+            "成交金额改为红色，房号永不换行",
+            "杂收入/杂支出配色对调：收入红色，支出绿色",
+            "汇总KPI和月度数据全部胶囊加底色",
+            "成交和中介费KPI配黄色"
+        ]),
+        ("v2.21", "2026-09-15", [
+            "回退到稳定版本",
+            "Excel转备份暂用桌面端转换工具"
+        ]),
+        ("v2.20", "2026-09-15", [
+            "清空数据对话框文字修正",
+            "右滑卡片改为iOS原生swipeActions，流畅度提升",
+            "杂项收入卡片优化：绿色圆形收字图标，备注为空不显示",
+            "成交记录卡片三行标签式布局",
+            "杂项支出卡片优化",
+            "汇总顶部3数据改5数据，字体放大加黑",
+            "工作台时间卡片收窄"
+        ]),
+        ("v2.19", "2026-09-15", [
+            "备份文件夹细分为4个：成交备份/收租备份/包租备份/总备份",
+            "各板块左上角导入数据改为恢复数据",
+            "设置页增加分板块清空（带二次确认）",
+            "设置页增加Excel转备份入口",
+            "自动备份固定为总备份"
+        ]),
+        ("v2.18", "2026-09-15", [
+            "修复收租数据导入闪退问题",
+            "SwiftData关系对象先insert再关联",
+            "支持收租表表名（原交租表）"
+        ]),
+        ("v2.17", "2026-09-15", [
+            "修复日期格式问题",
+            "日期统一使用yyyy-MM-dd格式"
+        ]),
+        ("v2.16", "2026-09-15", [
+            "分批导入优化，每批2条",
+            "降低主线程阻塞风险"
+        ]),
+        ("v2.15", "2026-09-15", [
+            "数据导入改为异步后台执行",
+            "避免UI卡顿"
+        ]),
+        ("v2.14", "2026-09-15", [
+            "数据导入功能优化",
+            "支持Excel模板导入"
+        ]),
+        ("v2.13", "2026-09-15", [
+            "收租管理界面优化",
+            "收租进度展示"
+        ]),
+        ("v2.12", "2026-09-15", [
+            "成交管理界面优化",
+            "新增筛选和搜索功能"
+        ]),
+        ("v2.11", "2026-09-15", [
+            "应用名称改为中介管家",
+            "APP图标优化"
+        ]),
+        ("v2.10", "2026-09-15", [
+            "新增包租管理板块",
+            "支持打租记录和月打租"
+        ]),
+        ("v2.9", "2026-09-15", [
+            "新增汇总板块",
+            "月度收支汇总统计"
+        ]),
+        ("v2.8", "2026-09-15", [
+            "工作台KPI看板",
+            "在管房间、即将到期、中介费等指标"
+        ]),
+        ("v2.7", "2026-09-15", [
+            "数据备份和恢复功能",
+            "支持分板块备份"
+        ]),
+        ("v2.6", "2026-09-15", [
+            "新增杂项收入和支出管理",
+            "支持自定义分类"
+        ]),
+        ("v2.5", "2026-09-15", [
+            "水电结算功能",
+            "按季度结算水电费"
+        ]),
+        ("v2.4", "2026-09-15", [
+            "收租管理板块",
+            "月度收租记录和提醒"
+        ]),
+        ("v2.3", "2026-09-15", [
+            "成交管理板块",
+            "支持成交记录录入和查询"
+        ]),
+        ("v2.2", "2026-09-15", [
+            "基础UI优化",
+            "深绿色主题"
+        ]),
+        ("v2.1", "2026-09-15", [
+            "基础功能完善",
+            "数据持久化优化"
+        ]),
+        ("v2.0", "2026-09-15", [
+            "重大版本更新",
+            "全新架构，SwiftData数据存储",
+            "6大功能板块"
+        ]),
+        ("v1.0", "2026-09-01", [
+            "初始版本发布",
+            "基础房产中介管理功能"
+        ])
+    ]
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(versions, id: \.version) { ver in
+                    Section(header: HStack {
+                        Text(ver.version)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.themeAccent)
+                        Spacer()
+                        Text(ver.date)
+                            .font(.system(size: 12))
+                            .foregroundColor(.themeText3)
+                    }) {
+                        ForEach(ver.changes, id: \.self) { change in
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "circle.fill")
+                                    .font(.system(size: 6))
+                                    .foregroundColor(.themeAccent)
+                                    .padding(.top, 6)
+                                Text(change)
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.themeText)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color.themeBg)
+            .navigationTitle("版本更新介绍")
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }

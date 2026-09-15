@@ -3,6 +3,7 @@ import SwiftData
 
 struct MonthlySummary: Identifiable {
     let id = UUID()
+    let year: Int
     let month: Int
     let dealCount: Int
     let agentFee: Double
@@ -53,6 +54,7 @@ struct ProfitView: View {
             let miscExpense = monthExpenses.reduce(0) { $0 + $1.amount }
             if monthDeals.count > 0 || monthIncomes.count > 0 || monthExpenses.count > 0 {
                 summaries.append(MonthlySummary(
+                    year: targetYear,
                     month: month,
                     dealCount: monthDeals.count,
                     agentFee: agentFee,
@@ -70,6 +72,7 @@ struct ProfitView: View {
         let allIncomes = incomes.filter { calendar.component(.year, from: $0.date) == targetYear }
         let allExpenses = expenses.filter { calendar.component(.year, from: $0.date) == targetYear }
         return MonthlySummary(
+            year: targetYear,
             month: 0,
             dealCount: allDeals.count,
             agentFee: allDeals.reduce(0) { $0 + $1.totalFee },
@@ -98,11 +101,11 @@ struct ProfitView: View {
                                 SummaryCard(title: "中介费", value: "¥\(Int(yearTotal.agentFee))", color: Color(hex: "F59E0B"))
                             }
                             HStack(spacing: 10) {
-                                SummaryCard(title: "杂收", value: "¥\(Int(yearTotal.miscIncome))", color: .themeRed)
-                                SummaryCard(title: "杂支", value: "¥\(Int(yearTotal.miscExpense))", color: .themeAccentDark)
+                                SummaryCard(title: "杂项收入", value: "¥\(Int(yearTotal.miscIncome))", color: .themeRed)
+                                SummaryCard(title: "杂项支出", value: "¥\(Int(yearTotal.miscExpense))", color: .themeAccentDark)
                             }
                         }
-                        SummaryCard(title: "净收入", value: "¥\(Int(yearTotal.netIncome))", color: .themeRed)
+                        SummaryCard(title: "净总收入", value: "¥\(Int(yearTotal.netIncome))", color: .themeRed)
                             .frame(maxWidth: .infinity)
                     }
                     .padding(.horizontal)
@@ -131,17 +134,21 @@ struct MonthlySummaryRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("\(summary.month)月")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(isCurrent ? .themeAccent : .themeText)
+                Text("\(summary.year)年\(summary.month)月")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.themeText)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(Color(hex: "E8F0FE"))
+                    .cornerRadius(.infinity)
                 if isCurrent {
                     Text("本月")
                         .font(.system(size: 10))
                         .foregroundColor(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
                         .background(Color.themeAccent)
-                        .cornerRadius(4)
+                        .cornerRadius(.infinity)
                 }
                 Spacer()
                 Text("净收入 ¥\(Int(summary.netIncome))")
@@ -186,14 +193,14 @@ struct SummaryItem: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(itemColor)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(itemColor.opacity(0.1))
                 .cornerRadius(.infinity)
             Text(label)
-                .font(.system(size: 10))
+                .font(.system(size: 11))
                 .foregroundColor(.themeText3)
         }
     }
@@ -214,7 +221,7 @@ struct SummaryCard: View {
                 .background(Color(hex: "F0F0F0"))
                 .cornerRadius(.infinity)
             Text(value)
-                .font(.system(size: 18, weight: .bold))
+                .font(.system(size: 20, weight: .bold))
                 .foregroundColor(color)
                 .minimumScaleFactor(0.5)
                 .lineLimit(1)
