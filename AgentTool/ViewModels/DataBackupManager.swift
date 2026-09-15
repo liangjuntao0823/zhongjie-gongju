@@ -229,19 +229,21 @@ class DataBackupManager {
                         propertyType: self.strVal(p["propertyType"]),
                         notes: self.strVal(p["notes"])
                     )
+                    modelContext.insert(prop)
                     if let monthly = p["monthlyRentRecords"] as? [[String: Any]] {
                         for m in monthly {
                             let rec = RentMonthRecord(month: self.intVal(m["month"]), amount: self.dbl(m["amount"]), isPaid: m["isPaid"] as? Bool ?? false)
+                            modelContext.insert(rec)
                             prop.monthlyRentRecords.append(rec)
                         }
                     }
                     if let quarterly = p["quarterlyUtilityRecords"] as? [[String: Any]] {
                         for q in quarterly {
                             let rec = UtilityQuarterRecord(quarter: self.intVal(q["quarter"]), electricAmount: self.dbl(q["electricAmount"]), waterAmount: self.dbl(q["waterAmount"]), isSettled: q["isSettled"] as? Bool ?? false)
+                            modelContext.insert(rec)
                             prop.quarterlyUtilityRecords.append(rec)
                         }
                     }
-                    modelContext.insert(prop)
                 }
             }
 
@@ -261,18 +263,19 @@ class DataBackupManager {
                         paymentMethod: self.strVal(p["paymentMethod"]),
                         notes: self.strVal(p["notes"])
                     )
+                    modelContext.insert(payout)
                     if let monthly = p["monthlyPayouts"] as? [[String: Any]] {
                         for m in monthly {
                             let rec = PayoutMonthRecord(month: self.intVal(m["month"]), amount: self.dbl(m["amount"]), isPaid: m["isPaid"] as? Bool ?? false)
+                            modelContext.insert(rec)
                             payout.monthlyPayouts.append(rec)
                         }
                     }
-                    modelContext.insert(payout)
                 }
             }
 
-            // 分批执行，每批5条
-            let batchSize = 5
+            // 分批执行，每批2条
+            let batchSize = 2
             var index = 0
             func processBatch() {
                 let end = min(index + batchSize, allItems.count)
