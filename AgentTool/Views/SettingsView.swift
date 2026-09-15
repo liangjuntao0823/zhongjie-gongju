@@ -120,16 +120,25 @@ struct SettingsView: View {
                     HStack {
                         Text("版本")
                         Spacer()
-                        Text("2.19").foregroundColor(.themeText2)
+                        Text("2.22").foregroundColor(.themeText2)
                     }
-                }
-
-                Section {
-                    Text("开发者：豆包And涛哥")
-                        .font(.footnote)
-                        .foregroundColor(.themeText3)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .listRowBackground(Color.clear)
+                    HStack {
+                        Text("开发者")
+                        Spacer()
+                        Text("豆包And涛哥").foregroundColor(.themeText2)
+                    }
+                    HStack {
+                        Text("软件说明")
+                        Spacer()
+                        Text("米兰公馆中介和二房东工作平台").foregroundColor(.themeText2)
+                            .font(.system(size: 14))
+                    }
+                    HStack {
+                        Text("数据安全")
+                        Spacer()
+                        Text("本地存储，纯单机无网络接口").foregroundColor(.themeText2)
+                            .font(.system(size: 14))
+                    }
                 }
             }
             .scrollContentBackground(.hidden)

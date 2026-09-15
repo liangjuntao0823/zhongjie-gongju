@@ -582,13 +582,9 @@ struct DealRow: View {
                     .padding(.vertical, 5)
                     .background(Color(hex: "FDECEC"))
                     .cornerRadius(.infinity)
-                Text("缴纳")
-                    .font(.system(size: 11))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 3)
-                    .background(Color.themeAccent)
-                    .cornerRadius(.infinity)
+                Text(deal.date, style: .date)
+                    .font(.system(size: 12))
+                    .foregroundColor(.themeText3)
             }
         }
         .padding(.horizontal, 14)

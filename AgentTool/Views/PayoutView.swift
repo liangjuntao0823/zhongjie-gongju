@@ -378,7 +378,7 @@ struct AddPayoutView: View {
     @State private var notes: String
 
     private let unitTypes = ["单间上层","单间下层","独立厨房上层","独立厨房下层","复式","中空复式","平层","双钥匙一套","三房"]
-    private let methods = ["月付","季付"]
+    private let methods = ["月付","季付","半年付","年付"]
 
     init(payout: PayoutRecord? = nil) {
         editingPayout = payout

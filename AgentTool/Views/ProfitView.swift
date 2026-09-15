@@ -18,7 +18,7 @@ struct ProfitView: View {
     @Query private var expenses: [MiscExpense]
 
     @State private var selectedYear: Int? = Calendar.current.component(.year, from: Date())
-    @State private var selectedMonth: Int? = Calendar.current.component(.month, from: Date())
+    @State private var selectedMonth: Int? = nil
 
     private var calendar: Calendar { Calendar.current }
 
@@ -61,7 +61,7 @@ struct ProfitView: View {
                 ))
             }
         }
-        return summaries
+        return summaries.sorted(by: { $0.month > $1.month })
     }
 
     private var yearTotal: MonthlySummary {
@@ -90,18 +90,20 @@ struct ProfitView: View {
                     .padding(.horizontal)
                     .padding(.top, 8)
 
-                    // 年度汇总卡片 - 两行布局
-                    VStack(spacing: 10) {
-                        HStack(spacing: 10) {
-                            SummaryCard(title: "成交", value: "\(yearTotal.dealCount)单", color: Color(hex: "F59E0B"))
-                            SummaryCard(title: "中介费", value: "¥\(Int(yearTotal.agentFee))", color: Color(hex: "F59E0B"))
-                            SummaryCard(title: "杂收", value: "¥\(Int(yearTotal.miscIncome))", color: .themeRed)
+                    // 年度汇总卡片 - 新布局：左边2x2，右边净收入跨两行
+                    HStack(spacing: 10) {
+                        VStack(spacing: 10) {
+                            HStack(spacing: 10) {
+                                SummaryCard(title: "成交", value: "\(yearTotal.dealCount)单", color: Color(hex: "F59E0B"))
+                                SummaryCard(title: "中介费", value: "¥\(Int(yearTotal.agentFee))", color: Color(hex: "F59E0B"))
+                            }
+                            HStack(spacing: 10) {
+                                SummaryCard(title: "杂收", value: "¥\(Int(yearTotal.miscIncome))", color: .themeRed)
+                                SummaryCard(title: "杂支", value: "¥\(Int(yearTotal.miscExpense))", color: .themeAccentDark)
+                            }
                         }
-                        HStack(spacing: 10) {
-                            SummaryCard(title: "杂支", value: "¥\(Int(yearTotal.miscExpense))", color: .themeAccentDark)
-                            SummaryCard(title: "净收入", value: "¥\(Int(yearTotal.netIncome))", color: yearTotal.netIncome >= 0 ? .themeAccentDark : .themeRed)
-                            Color.clear.frame(maxWidth: .infinity)
-                        }
+                        SummaryCard(title: "净收入", value: "¥\(Int(yearTotal.netIncome))", color: .themeRed)
+                            .frame(maxWidth: .infinity)
                     }
                     .padding(.horizontal)
 
@@ -143,8 +145,12 @@ struct MonthlySummaryRow: View {
                 }
                 Spacer()
                 Text("净收入 ¥\(Int(summary.netIncome))")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(summary.netIncome >= 0 ? .themeAccentDark : .themeRed)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.themeRed)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color(hex: "FDECEC"))
+                    .cornerRadius(.infinity)
             }
 
             HStack(spacing: 0) {
@@ -168,14 +174,23 @@ struct SummaryItem: View {
     let label: String
     let value: String
 
+    private var itemColor: Color {
+        switch label {
+        case "成交", "中介费": return Color(hex: "F59E0B")
+        case "杂收入": return .themeRed
+        case "支出": return .themeAccentDark
+        default: return .themeText
+        }
+    }
+
     var body: some View {
         VStack(spacing: 4) {
             Text(value)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.themeText)
+                .foregroundColor(itemColor)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
-                .background(Color(hex: "F5F5F5"))
+                .background(itemColor.opacity(0.1))
                 .cornerRadius(.infinity)
             Text(label)
                 .font(.system(size: 10))
