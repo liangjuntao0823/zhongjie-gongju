@@ -93,12 +93,12 @@ struct ProfitView: View {
                     // 年度汇总卡片 - 两行布局
                     VStack(spacing: 10) {
                         HStack(spacing: 10) {
-                            SummaryCard(title: "成交", value: "\(yearTotal.dealCount)单", color: .themeAccentDark)
-                            SummaryCard(title: "中介费", value: "¥\(Int(yearTotal.agentFee))", color: .themeAccentDark)
-                            SummaryCard(title: "杂收", value: "¥\(Int(yearTotal.miscIncome))", color: .themeAccentDark)
+                            SummaryCard(title: "成交", value: "\(yearTotal.dealCount)单", color: Color(hex: "F59E0B"))
+                            SummaryCard(title: "中介费", value: "¥\(Int(yearTotal.agentFee))", color: Color(hex: "F59E0B"))
+                            SummaryCard(title: "杂收", value: "¥\(Int(yearTotal.miscIncome))", color: .themeRed)
                         }
                         HStack(spacing: 10) {
-                            SummaryCard(title: "杂支", value: "¥\(Int(yearTotal.miscExpense))", color: .themeRed)
+                            SummaryCard(title: "杂支", value: "¥\(Int(yearTotal.miscExpense))", color: .themeAccentDark)
                             SummaryCard(title: "净收入", value: "¥\(Int(yearTotal.netIncome))", color: yearTotal.netIncome >= 0 ? .themeAccentDark : .themeRed)
                             Color.clear.frame(maxWidth: .infinity)
                         }
@@ -169,10 +169,14 @@ struct SummaryItem: View {
     let value: String
 
     var body: some View {
-        VStack(spacing: 3) {
+        VStack(spacing: 4) {
             Text(value)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(.themeText)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color(hex: "F5F5F5"))
+                .cornerRadius(.infinity)
             Text(label)
                 .font(.system(size: 10))
                 .foregroundColor(.themeText3)
@@ -186,12 +190,26 @@ struct SummaryCard: View {
     let color: Color
 
     var body: some View {
-        VStack(spacing: 6) {
-            Text(title).font(.system(size: 13, weight: .medium)).foregroundColor(.themeText2)
-            Text(value).font(.system(size: 20, weight: .bold)).foregroundColor(color).minimumScaleFactor(0.5).lineLimit(1)
+        VStack(spacing: 8) {
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.themeText2)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(Color(hex: "F0F0F0"))
+                .cornerRadius(.infinity)
+            Text(value)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(color)
+                .minimumScaleFactor(0.5)
+                .lineLimit(1)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(color.opacity(0.1))
+                .cornerRadius(.infinity)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
+        .padding(.vertical, 14)
         .background(Color.themePanel)
         .cornerRadius(12)
     }

@@ -519,68 +519,76 @@ struct DealRow: View {
     var body: some View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 6) {
-                // 第一行：房号+房东+户型
+                // 第一行：房号+房东
                 HStack(spacing: 6) {
                     Text(deal.roomNumber)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.themeText)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
                         .background(Color(hex: "F0F0F0"))
-                        .cornerRadius(6)
+                        .cornerRadius(.infinity)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                     if !deal.landlord.isEmpty {
                         Text("房东：\(deal.landlord)")
                             .font(.system(size: 12))
                             .foregroundColor(.themeText2)
-                    }
-                    if !deal.unitType.isEmpty {
-                        Text("户型：\(deal.unitType)")
-                            .font(.system(size: 12))
-                            .foregroundColor(.themeText2)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color(hex: "E8F0FE"))
+                            .cornerRadius(.infinity)
                     }
                 }
-                // 第二行：交租日+月租+押金
+                // 第二行：月租+押金
                 HStack(spacing: 6) {
-                    if let day = deal.rentDueDay {
-                        Text("\(day)号交租")
-                            .font(.system(size: 12))
-                            .foregroundColor(.themeText2)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Color(hex: "FDF0F0"))
-                            .cornerRadius(6)
-                    }
                     if deal.rent > 0 {
                         Text("月租¥\(Int(deal.rent))/月")
                             .font(.system(size: 12))
                             .foregroundColor(.themeText2)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color(hex: "FFF3E0"))
+                            .cornerRadius(.infinity)
                     }
                     if deal.deposit > 0 {
                         Text("押金¥\(Int(deal.deposit))")
                             .font(.system(size: 12))
                             .foregroundColor(.themeText2)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color(hex: "FFF3E0"))
+                            .cornerRadius(.infinity)
                     }
                 }
                 // 第三行：备注
                 if !deal.notes.isEmpty {
                     Text("备注：\(deal.notes)")
                         .font(.system(size: 12))
-                        .foregroundColor(.themeAmber)
+                        .foregroundColor(.themeText2)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color(hex: "F3E5F5"))
+                        .cornerRadius(.infinity)
                         .lineLimit(1)
                 }
             }
             Spacer()
-            VStack(alignment: .trailing, spacing: 4) {
+            VStack(alignment: .trailing, spacing: 8) {
                 Text("+¥\(Int(deal.totalFee))")
-                    .foregroundColor(.themeAccentDark)
+                    .foregroundColor(.themeRed)
                     .font(.system(size: 16, weight: .bold))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(Color(hex: "FDECEC"))
+                    .cornerRadius(.infinity)
+                Text("缴纳")
+                    .font(.system(size: 11))
+                    .foregroundColor(.white)
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Color(hex: "E2F4EF"))
-                    .cornerRadius(8)
-                Text(deal.date, style: .date)
-                    .font(.system(size: 12))
-                    .foregroundColor(.themeText3)
+                    .padding(.vertical, 3)
+                    .background(Color.themeAccent)
+                    .cornerRadius(.infinity)
             }
         }
         .padding(.horizontal, 14)
@@ -599,10 +607,10 @@ struct MiscRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // 左边圆形图标
+            // 左边圆形图标 - 收入红色，支出绿色
             ZStack {
                 Circle()
-                    .fill(isIncome ? Color(hex: "0FA48B") : Color(hex: "E05555"))
+                    .fill(isIncome ? Color(hex: "E05555") : Color(hex: "0FA48B"))
                     .frame(width: 48, height: 48)
                 Text(isIncome ? "收" : "支")
                     .font(.system(size: 18, weight: .bold))
@@ -610,27 +618,39 @@ struct MiscRow: View {
             }
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.themeText)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color(hex: "F0F0F0"))
+                    .cornerRadius(.infinity)
                 if !subtitle.isEmpty {
                     Text("备注：\(subtitle)")
                         .font(.system(size: 12))
-                        .foregroundColor(.themeAmber)
+                        .foregroundColor(.themeText2)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color(hex: "F3E5F5"))
+                        .cornerRadius(.infinity)
                         .lineLimit(1)
                 }
             }
             Spacer()
-            VStack(alignment: .trailing, spacing: 4) {
+            VStack(alignment: .trailing, spacing: 8) {
                 Text("\(isIncome ? "+" : "-")¥\(Int(amount))")
-                    .foregroundColor(isIncome ? .themeAccentDark : .themeRed)
+                    .foregroundColor(isIncome ? .themeRed : .themeAccentDark)
                     .font(.system(size: 16, weight: .bold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(isIncome ? Color(hex: "E2F4EF") : Color(hex: "FDF0F0"))
-                    .cornerRadius(8)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(isIncome ? Color(hex: "FDECEC") : Color(hex: "E2F4EF"))
+                    .cornerRadius(.infinity)
                 Text(date, style: .date)
-                    .font(.system(size: 12))
-                    .foregroundColor(.themeText3)
+                    .font(.system(size: 11))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 3)
+                    .background(Color.themeAccent)
+                    .cornerRadius(.infinity)
             }
         }
         .padding(.horizontal, 14)

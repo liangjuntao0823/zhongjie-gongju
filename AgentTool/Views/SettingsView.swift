@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var showMessage = ""
     @State private var showAlert = false
     @State private var showClearSheet = false
+    @State private var showBackupSheet = false
     @State private var showRestoreList = false
     @State private var showExcelConvert = false
     @State private var autoBackupEnabled = false
@@ -22,7 +23,7 @@ struct SettingsView: View {
             Form {
                 Section("数据管理") {
                     Button {
-                        backupData()
+                        showBackupSheet = true
                     } label: {
                         HStack {
                             Image(systemName: "square.and.arrow.down.fill")
@@ -141,6 +142,13 @@ struct SettingsView: View {
             } message: {
                 Text(showMessage)
             }
+            .confirmationDialog("选择要备份的板块", isPresented: $showBackupSheet, titleVisibility: .visible) {
+                Button("备份成交数据") { backupData(type: .deals) }
+                Button("备份收租数据") { backupData(type: .properties) }
+                Button("备份包租数据") { backupData(type: .payouts) }
+                Button("备份全部数据") { backupData(type: .total) }
+                Button("取消", role: .cancel) { }
+            }
             .confirmationDialog("选择要清空的板块", isPresented: $showClearSheet, titleVisibility: .visible) {
                 Button("清空成交数据") { clearType = .deals; showClearConfirm = true }
                 Button("清空收租数据") { clearType = .properties; showClearConfirm = true }
@@ -174,14 +182,25 @@ struct SettingsView: View {
         }
     }
 
-    // 备份数据 - 保存到总备份文件夹
-    private func backupData() {
-        guard let data = backupManager.exportAllData(modelContext: modelContext) else {
+    // 备份数据 - 按板块备份
+    private func backupData(type: DataBackupManager.BackupType) {
+        let data: Data?
+        switch type {
+        case .deals:
+            data = backupManager.exportDeals(modelContext: modelContext)
+        case .properties:
+            data = backupManager.exportProperties(modelContext: modelContext)
+        case .payouts:
+            data = backupManager.exportPayouts(modelContext: modelContext)
+        case .total:
+            data = backupManager.exportAllData(modelContext: modelContext)
+        }
+        guard let backupData = data else {
             showMessage = "备份失败"
             showAlert = true
             return
         }
-        if let url = backupManager.saveBackup(data, type: .total) {
+        if let url = backupManager.saveBackup(backupData, type: type) {
             showMessage = "备份成功：\(url.lastPathComponent)"
         } else {
             showMessage = "备份失败"
