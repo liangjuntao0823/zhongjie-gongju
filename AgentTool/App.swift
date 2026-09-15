@@ -57,6 +57,7 @@ struct AgentToolApp: App {
 struct MainTabView: View {
     @EnvironmentObject private var tabRouter: TabRouter
     @Environment(\.modelContext) private var modelContext
+    @State private var hasImported = false
 
     private let tabs = [
         (title: "工作台", icon: "house.fill"),
@@ -77,31 +78,33 @@ struct MainTabView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        VStack(spacing: 0) {
             // 内容区域
-            Group {
-                switch tabRouter.selectedTab {
-                case 0: DashboardView()
-                case 1: DealsView()
-                case 2: RentCollectionView()
-                case 3: PayoutView()
-                case 4: ProfitView()
-                case 5: SettingsView()
-                default: DashboardView()
+            ZStack {
+                Color.themeBg.ignoresSafeArea()
+                Group {
+                    switch tabRouter.selectedTab {
+                    case 0: DashboardView()
+                    case 1: DealsView()
+                    case 2: RentCollectionView()
+                    case 3: PayoutView()
+                    case 4: ProfitView()
+                    case 5: SettingsView()
+                    default: DashboardView()
+                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             // 自定义底部导航
             VStack(spacing: 0) {
-                Divider()
-                    .background(Color.themeBorder)
+                Divider().background(Color.themeBorder)
                 HStack(spacing: 0) {
                     ForEach(0..<tabs.count, id: \.self) { index in
                         Button {
                             tabRouter.selectedTab = index
                         } label: {
-                            VStack(spacing: 3) {
+                            VStack(spacing: 2) {
                                 Image(systemName: tabs[index].icon)
                                     .font(.system(size: 18))
                                 Text(tabs[index].title)
@@ -109,24 +112,25 @@ struct MainTabView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.top, 6)
-                            .padding(.bottom, 8)
+                            .padding(.bottom, 6)
                             .foregroundColor(tabRouter.selectedTab == index ? .themeAccent : .themeText3)
                         }
                     }
                 }
                 .background(Color.themePanel)
-                .padding(.bottom, UIApplication.shared.windows.first?.safeAreaInsets.bottom ?? 0)
             }
         }
-        .ignoresSafeArea(.keyboard, edges: .bottom)
         .onAppear {
-            // 首次启动导入初始数据
-            if !UserDefaults.standard.bool(forKey: "initialDataImported") {
-                if DataBackupManager.shared.importInitialData(modelContext: modelContext) {
-                    UserDefaults.standard.set(true, forKey: "initialDataImported")
-                    print("初始数据导入成功")
-                } else {
-                    print("初始数据导入失败或文件不存在")
+            // 首次启动导入初始数据（只执行一次）
+            if !hasImported && !UserDefaults.standard.bool(forKey: "initialDataImported") {
+                hasImported = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    if DataBackupManager.shared.importInitialData(modelContext: modelContext) {
+                        UserDefaults.standard.set(true, forKey: "initialDataImported")
+                        print("初始数据导入成功")
+                    } else {
+                        print("初始数据导入失败或文件不存在")
+                    }
                 }
             }
         }

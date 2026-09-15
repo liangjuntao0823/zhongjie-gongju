@@ -4,7 +4,25 @@ import SwiftData
 // 数据备份/导入导出管理
 class DataBackupManager {
     static let shared = DataBackupManager()
-    private let formatter = ISO8601DateFormatter()
+    private let isoFormatter = ISO8601DateFormatter()
+    private let dateFormatters: [DateFormatter] = {
+        let formats = ["yyyy-MM-dd", "yyyy.MM.dd", "yyyy/MM/dd", "yyyy-MM-dd'T'HH:mm:ssXXXXX"]
+        return formats.map { fmt in
+            let df = DateFormatter()
+            df.dateFormat = fmt
+            df.locale = Locale(identifier: "zh_CN")
+            return df
+        }
+    }()
+
+    private func parseDate(_ str: String?) -> Date {
+        guard let s = str, !s.isEmpty else { return Date() }
+        if let d = isoFormatter.date(from: s) { return d }
+        for df in dateFormatters {
+            if let d = df.date(from: s) { return d }
+        }
+        return Date()
+    }
 
     // 导出所有数据为JSON
     func exportAllData(modelContext: ModelContext) -> Data? {
@@ -19,12 +37,12 @@ class DataBackupManager {
         // 成交
         dict["deals"] = deals.map { deal in
             [
-                "date": formatter.string(from: deal.date),
+                "date": isoFormatter.string(from: deal.date),
                 "roomNumber": deal.roomNumber,
                 "landlord": deal.landlord,
                 "unitType": deal.unitType,
-                "leaseStart": formatter.string(from: deal.leaseStart),
-                "leaseEnd": formatter.string(from: deal.leaseEnd),
+                "leaseStart": isoFormatter.string(from: deal.leaseStart),
+                "leaseEnd": isoFormatter.string(from: deal.leaseEnd),
                 "leaseDuration": deal.leaseDuration,
                 "rent": deal.rent,
                 "deposit": deal.deposit,
@@ -41,12 +59,12 @@ class DataBackupManager {
 
         // 杂项收入
         dict["incomes"] = incomes.map { inc in
-            ["date": formatter.string(from: inc.date), "item": inc.item, "amount": inc.amount, "notes": inc.notes]
+            ["date": isoFormatter.string(from: inc.date), "item": inc.item, "amount": inc.amount, "notes": inc.notes]
         }
 
         // 杂项支出
         dict["expenses"] = expenses.map { exp in
-            ["date": formatter.string(from: exp.date), "item": exp.item, "amount": exp.amount, "notes": exp.notes]
+            ["date": isoFormatter.string(from: exp.date), "item": exp.item, "amount": exp.amount, "notes": exp.notes]
         }
 
         // 房源
@@ -79,8 +97,8 @@ class DataBackupManager {
                 "unitType": p.unitType,
                 "annualRent": p.annualRent,
                 "deposit": p.deposit,
-                "leaseStartDate": formatter.string(from: p.leaseStartDate),
-                "leaseEndDate": formatter.string(from: p.leaseEndDate),
+                "leaseStartDate": isoFormatter.string(from: p.leaseStartDate),
+                "leaseEndDate": isoFormatter.string(from: p.leaseEndDate),
                 "leaseDuration": p.leaseDuration,
                 "rentFreeDays": p.rentFreeDays,
                 "waterMeterBase": p.waterMeterBase,
@@ -108,12 +126,12 @@ class DataBackupManager {
         if let deals = dict["deals"] as? [[String: Any]] {
             for d in deals {
                 let deal = DealRecord(
-                    date: formatter.date(from: d["date"] as? String ?? "") ?? Date(),
+                    date: parseDate( d["date"] as? String ?? "") ?? Date(),
                     roomNumber: d["roomNumber"] as? String ?? "",
                     landlord: d["landlord"] as? String ?? "",
                     unitType: d["unitType"] as? String ?? "",
-                    leaseStart: formatter.date(from: d["leaseStart"] as? String ?? "") ?? Date(),
-                    leaseEnd: formatter.date(from: d["leaseEnd"] as? String ?? "") ?? Date(),
+                    leaseStart: parseDate( d["leaseStart"] as? String ?? "") ?? Date(),
+                    leaseEnd: parseDate( d["leaseEnd"] as? String ?? "") ?? Date(),
                     leaseDuration: d["leaseDuration"] as? String ?? "",
                     rent: d["rent"] as? Double ?? 0,
                     deposit: d["deposit"] as? Double ?? 0,
@@ -134,7 +152,7 @@ class DataBackupManager {
         if let incomes = dict["incomes"] as? [[String: Any]] {
             for inc in incomes {
                 let income = MiscIncome(
-                    date: formatter.date(from: inc["date"] as? String ?? "") ?? Date(),
+                    date: parseDate( inc["date"] as? String ?? "") ?? Date(),
                     item: inc["item"] as? String ?? "",
                     amount: inc["amount"] as? Double ?? 0,
                     notes: inc["notes"] as? String ?? ""
@@ -147,7 +165,7 @@ class DataBackupManager {
         if let expenses = dict["expenses"] as? [[String: Any]] {
             for exp in expenses {
                 let expense = MiscExpense(
-                    date: formatter.date(from: exp["date"] as? String ?? "") ?? Date(),
+                    date: parseDate( exp["date"] as? String ?? "") ?? Date(),
                     item: exp["item"] as? String ?? "",
                     amount: exp["amount"] as? Double ?? 0,
                     notes: exp["notes"] as? String ?? ""
@@ -198,8 +216,8 @@ class DataBackupManager {
                     roomNumber: p["roomNumber"] as? String ?? "",
                     manager: p["manager"] as? String ?? "",
                     unitType: p["unitType"] as? String ?? "",
-                    leaseStartDate: formatter.date(from: p["leaseStartDate"] as? String ?? "") ?? Date(),
-                    leaseEndDate: formatter.date(from: p["leaseEndDate"] as? String ?? "") ?? Date(),
+                    leaseStartDate: parseDate( p["leaseStartDate"] as? String ?? "") ?? Date(),
+                    leaseEndDate: parseDate( p["leaseEndDate"] as? String ?? "") ?? Date(),
                     leaseDuration: p["leaseDuration"] as? String ?? "",
                     rentFreeDays: p["rentFreeDays"] as? Int ?? 0,
                     annualRent: p["annualRent"] as? Double ?? 0,
