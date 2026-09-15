@@ -304,7 +304,7 @@ struct MonthPayoutRow: View {
         self.defaultAmount = defaultAmount
         let record = payout.monthlyPayouts.first { $0.month == month }
         let amt = record?.amount ?? defaultAmount
-        _amountText = State(initialValue: amt > 0 ? String(amt) : "")
+        _amountText = State(initialValue: amt > 0 ? String(Int(amt)) : "")
         _isPaid = State(initialValue: record?.isPaid ?? false)
     }
 

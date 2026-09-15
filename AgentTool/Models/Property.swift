@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import SwiftUI
 
 @Model
 final class Property {
@@ -16,7 +17,7 @@ final class Property {
     var rentDueDay: Int // 1-31
     var waterMeterBase: Int
     var electricMeterBase: Int
-    var propertyType: String // 普通, 包租, 托管
+    var propertyType: String // 管理, 包租, 托管
     var monthlyRentRecords: [RentMonthRecord]
     var quarterlyUtilityRecords: [UtilityQuarterRecord]
     var notes: String
@@ -26,7 +27,7 @@ final class Property {
          rent: Double = 0, deposit: Double = 0, prepayment: Double = 0,
          leaseStart: String = "", leaseEnd: String = "", leaseDuration: String = "",
          rentDueDay: Int = 1, waterMeterBase: Int = 0, electricMeterBase: Int = 0,
-         propertyType: String = "普通", notes: String = "") {
+         propertyType: String = "管理", notes: String = "") {
         self.id = UUID()
         self.roomNumber = roomNumber
         self.landlord = landlord
@@ -53,6 +54,38 @@ final class Property {
 
     var isManaged: Bool {
         propertyType == "包租" || propertyType == "托管"
+    }
+
+    // 统一显示名称（旧数据"普通"映射为"管理"）
+    var typeDisplayName: String {
+        propertyType == "普通" ? "管理" : propertyType
+    }
+
+    // 类型对应的单字
+    var typeChar: String {
+        switch typeDisplayName {
+        case "包租": return "包"
+        case "托管": return "托"
+        default: return "管"
+        }
+    }
+
+    // 类型对应的颜色
+    var typeColor: Color {
+        switch typeDisplayName {
+        case "包租": return Color(hex: "7B61FF")
+        case "托管": return Color(hex: "E09A2F")
+        default: return Color(hex: "0FA48B")
+        }
+    }
+
+    // 类型对应的浅色背景
+    var typeBgColor: Color {
+        switch typeDisplayName {
+        case "包租": return Color(hex: "F0EDFF")
+        case "托管": return Color(hex: "FBF1DE")
+        default: return Color(hex: "E2F4EF")
+        }
     }
 }
 

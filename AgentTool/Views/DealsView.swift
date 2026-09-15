@@ -738,12 +738,12 @@ struct EditDealView: View {
         _leaseStart = State(initialValue: deal.leaseStart)
         _leaseEnd = State(initialValue: deal.leaseEnd)
         _leaseDuration = State(initialValue: deal.leaseDuration)
-        _rentText = State(initialValue: deal.rent > 0 ? String(deal.rent) : "")
-        _depositText = State(initialValue: deal.deposit > 0 ? String(deal.deposit) : "")
-        _prepaymentText = State(initialValue: deal.prepayment > 0 ? String(deal.prepayment) : "")
+        _rentText = State(initialValue: deal.rent > 0 ? String(Int(deal.rent)) : "")
+        _depositText = State(initialValue: deal.deposit > 0 ? String(Int(deal.deposit)) : "")
+        _prepaymentText = State(initialValue: deal.prepayment > 0 ? String(Int(deal.prepayment)) : "")
         _rentDueDay = State(initialValue: deal.rentDueDay)
-        _agentFeeLandlordText = State(initialValue: deal.agentFeeLandlord > 0 ? String(deal.agentFeeLandlord) : "")
-        _agentFeeTenantText = State(initialValue: deal.agentFeeTenant > 0 ? String(deal.agentFeeTenant) : "")
+        _agentFeeLandlordText = State(initialValue: deal.agentFeeLandlord > 0 ? String(Int(deal.agentFeeLandlord)) : "")
+        _agentFeeTenantText = State(initialValue: deal.agentFeeTenant > 0 ? String(Int(deal.agentFeeTenant)) : "")
         _manager = State(initialValue: deal.manager)
         _source = State(initialValue: deal.source)
         _notes = State(initialValue: deal.notes)
@@ -894,12 +894,12 @@ struct EditMiscView: View {
         case .income(let inc):
             _date = State(initialValue: inc.date)
             _title = State(initialValue: inc.item)
-            _amountText = State(initialValue: inc.amount > 0 ? String(inc.amount) : "")
+            _amountText = State(initialValue: inc.amount > 0 ? String(Int(inc.amount)) : "")
             _notes = State(initialValue: inc.notes)
         case .expense(let exp):
             _date = State(initialValue: exp.date)
             _title = State(initialValue: exp.item)
-            _amountText = State(initialValue: exp.amount > 0 ? String(exp.amount) : "")
+            _amountText = State(initialValue: exp.amount > 0 ? String(Int(exp.amount)) : "")
             _notes = State(initialValue: exp.notes)
         }
     }

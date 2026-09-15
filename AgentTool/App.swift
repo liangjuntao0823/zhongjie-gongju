@@ -93,7 +93,7 @@ struct MainTabView: View {
                 .tag(3)
 
             ProfitView()
-                .tabItem { Label("盈亏", systemImage: "chart.pie.fill") }
+                .tabItem { Label("汇总", systemImage: "chart.pie.fill") }
                 .tag(4)
         }
         .tint(.themeAccent)

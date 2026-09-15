@@ -326,67 +326,6 @@ struct DashboardView: View {
                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.themeBorder, lineWidth: 1))
                 .padding(.horizontal)
 
-                // 租期提醒（常显标题，无数据时只显示标题）
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(Color.themeAccent)
-                            .frame(width: 8, height: 8)
-                        Text("租期提醒")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.themeText)
-                        Text("30天内到期")
-                            .font(.system(size: 12))
-                            .foregroundColor(.themeText3)
-                        Spacer()
-                    }
-                    if let expiring = stats?.expiringSoon, !expiring.isEmpty {
-                        ForEach(expiring, id: \.id) { prop in
-                            let days = daysUntilExpiry(prop)
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Text(prop.roomNumber)
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(.themeText)
-                                    Spacer()
-                                    Text("还剩\(days)天")
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundColor(days <= 7 ? .themeRed : .themeAmber)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 4)
-                                        .background(days <= 7 ? Color(hex: "FDF0F0") : Color(hex: "FBF1DE"))
-                                        .cornerRadius(8)
-                                }
-                                HStack(spacing: 12) {
-                                    Text("到期: \(prop.leaseEnd)")
-                                        .font(.system(size: 11.5))
-                                        .foregroundColor(.themeText3)
-                                    Text("房东: \(prop.landlord)")
-                                        .font(.system(size: 11.5))
-                                        .foregroundColor(.themeText3)
-                                }
-                                HStack(spacing: 12) {
-                                    Text("租金: ¥\(Int(prop.rent))")
-                                        .font(.system(size: 11.5))
-                                        .foregroundColor(.themeText3)
-                                    Text("押金: ¥\(Int(prop.deposit))")
-                                        .font(.system(size: 11.5))
-                                        .foregroundColor(.themeText3)
-                                }
-                            }
-                            .padding(.vertical, 4)
-                            if prop.id != expiring.last?.id {
-                                Divider().background(Color.themeBorder)
-                            }
-                        }
-                    }
-                }
-                .padding(16)
-                .background(Color.themePanel)
-                .cornerRadius(14)
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.themeBorder, lineWidth: 1))
-                .padding(.horizontal)
-
                 // 收租进度
                 VStack(alignment: .leading, spacing: 10) {
                     SectionTitle(title: "收租进度", subtitle: "本月")
@@ -485,45 +424,35 @@ struct DashboardView: View {
                         SectionTitle(title: "即将到期", subtitle: "\(expiring.count)套")
                         ForEach(expiring.prefix(3), id: \.id) { prop in
                             let days = daysUntilExpiry(prop)
-                            HStack(spacing: 12) {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color(hex: "FDF0F0"))
-                                        .frame(width: 40, height: 40)
-                                    Image(systemName: "exclamationmark")
-                                        .font(.system(size: 18, weight: .bold))
+                            VStack(alignment: .leading, spacing: 6) {
+                                // 第一行：房号 + 到期日 + 剩余天数
+                                HStack(spacing: 10) {
+                                    Text(prop.roomNumber)
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.themeText)
+                                    Text("到期:\(prop.leaseEnd)")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.themeText2)
+                                    Spacer()
+                                    Text("还剩\(days)天")
+                                        .font(.system(size: 12, weight: .semibold))
                                         .foregroundColor(.themeRed)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 5)
+                                        .background(Color(hex: "FDF0F0"))
+                                        .cornerRadius(12)
                                 }
-                                VStack(alignment: .leading, spacing: 4) {
-                                    HStack {
-                                        Text(prop.roomNumber)
-                                            .font(.system(size: 14, weight: .semibold))
-                                            .foregroundColor(.themeText)
-                                        Spacer()
-                                        Text("还剩\(days)天")
-                                            .font(.system(size: 11, weight: .semibold))
-                                            .foregroundColor(days <= 7 ? .themeRed : .themeAmber)
-                                            .padding(.horizontal, 10)
-                                            .padding(.vertical, 4)
-                                            .background(days <= 7 ? Color(hex: "FDF0F0") : Color(hex: "FBF1DE"))
-                                            .cornerRadius(8)
-                                    }
-                                    HStack(spacing: 12) {
-                                        Text("到期: \(prop.leaseEnd)")
-                                            .font(.system(size: 11.5))
-                                            .foregroundColor(.themeText3)
-                                        Text("房东: \(prop.landlord)")
-                                            .font(.system(size: 11.5))
-                                            .foregroundColor(.themeText3)
-                                    }
-                                    HStack(spacing: 12) {
-                                        Text("租金: ¥\(Int(prop.rent))")
-                                            .font(.system(size: 11.5))
-                                            .foregroundColor(.themeText3)
-                                        Text("押金: ¥\(Int(prop.deposit))")
-                                            .font(.system(size: 11.5))
-                                            .foregroundColor(.themeText3)
-                                    }
+                                // 第二行：房东 + 租金 + 押金
+                                HStack(spacing: 12) {
+                                    Text("房东: \(prop.landlord)")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.themeText3)
+                                    Text("租金: ¥\(Int(prop.rent))")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.themeText3)
+                                    Text("押金: ¥\(Int(prop.deposit))")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.themeText3)
                                 }
                             }
                             .padding(.vertical, 4)

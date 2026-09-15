@@ -204,7 +204,7 @@ struct RentCollectionView: View {
 
     private func exportTemplate() {
         let headers = ["房号","房东","户型","月租金","交租日","房源类型","备注"]
-        let rows = [["1-101","张三","单间上层","1000","1","普通收租","示例"]]
+        let rows = [["1-101","张三","单间上层","1000","1","管理","示例"]]
         let html = makeExcelHTML(title: "收租记录", headers: headers, rows: rows)
         let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("收租记录-模板.xls")
         try? html.write(to: fileURL, atomically: true, encoding: .utf8)
@@ -266,7 +266,7 @@ struct RentCollectionView: View {
             let prop = Property(
                 roomNumber: cols[0], landlord: cols[1], unitType: cols[2],
                 rent: Double(cols[3]) ?? 0, rentDueDay: Int(cols[4]) ?? 1,
-                propertyType: cols.count > 5 ? cols[5] : "普通收租",
+                propertyType: cols.count > 5 ? cols[5] : "管理",
                 notes: cols.count > 6 ? cols[6] : ""
             )
             modelContext.insert(prop)
@@ -278,15 +278,38 @@ struct PropertyRentRow: View {
     let property: Property
     private var currentMonth: Int { Calendar.current.component(.month, from: Date()) }
 
+    private var paidMonthsCount: Int {
+        property.monthlyRentRecords.filter { $0.isPaid }.count
+    }
+
+    private var totalUtility: Double {
+        property.quarterlyUtilityRecords.reduce(0) { $0 + $1.electricAmount + $1.waterAmount }
+    }
+
+    private var leaseYears: String {
+        guard !property.leaseStart.isEmpty, !property.leaseEnd.isEmpty else { return "" }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy.M.d"
+        guard let start = fmt.date(from: property.leaseStart),
+              let end = fmt.date(from: property.leaseEnd) else { return "" }
+        let months = Calendar.current.dateComponents([.month], from: start, to: end).month ?? 0
+        if months >= 12 {
+            let years = Double(months) / 12.0
+            return years.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(years))年" : String(format: "%.1f年", years)
+        }
+        return "\(months)个月"
+    }
+
     var body: some View {
         HStack(spacing: 12) {
+            // 左侧字图标
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(property.isManaged ? Color(hex: "F0E8FE") : Color.themeAccentWeak)
+                    .fill(property.typeBgColor)
                     .frame(width: 44, height: 44)
-                Image(systemName: property.isManaged ? "briefcase.fill" : "house.fill")
-                    .foregroundColor(property.isManaged ? Color(hex: "6B3FA0") : .themeAccentDark)
-                    .font(.system(size: 18))
+                Text(property.typeChar)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(property.typeColor)
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -297,14 +320,13 @@ struct PropertyRentRow: View {
                     Text(property.unitType)
                         .font(.system(size: 11))
                         .foregroundColor(.themeText3)
-                    if property.isManaged {
-                        Text(property.propertyType)
-                            .font(.system(size: 10))
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Color(hex: "F0E8FE"))
-                            .foregroundColor(Color(hex: "6B3FA0"))
-                            .cornerRadius(4)
-                    }
+                    // 所有房源都显示类型标签
+                    Text(property.typeDisplayName)
+                        .font(.system(size: 10))
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(property.typeBgColor)
+                        .foregroundColor(property.typeColor)
+                        .cornerRadius(4)
                 }
                 HStack(spacing: 8) {
                     Text("房东: \(property.landlord)")
@@ -314,20 +336,36 @@ struct PropertyRentRow: View {
                     Text("每月\(property.rentDueDay)号")
                         .font(.system(size: 11)).foregroundColor(.themeText2)
                 }
-                Text(property.leaseStart.isEmpty ? "未出租" : "\(property.leaseStart) 至 \(property.leaseEnd)")
-                    .font(.system(size: 10))
-                    .foregroundColor(property.leaseStart.isEmpty ? .themeAmber : .themeText3)
+                HStack(spacing: 6) {
+                    Text(property.leaseStart.isEmpty ? "未出租" : "\(property.leaseStart) 至 \(property.leaseEnd)")
+                        .font(.system(size: 10))
+                        .foregroundColor(property.leaseStart.isEmpty ? .themeAmber : .themeText3)
+                    if !leaseYears.isEmpty {
+                        Text(leaseYears)
+                            .font(.system(size: 10))
+                            .foregroundColor(.themeText3)
+                    }
+                }
             }
             Spacer()
 
-            let paid = property.monthlyRentRecords.contains { $0.month == currentMonth && $0.isPaid }
-            VStack(alignment: .trailing, spacing: 4) {
-                Image(systemName: paid ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(paid ? .themeAccent : .themeText3)
-                    .font(.system(size: 20))
-                Text(paid ? "已收" : "待收")
-                    .font(.system(size: 11))
-                    .foregroundColor(paid ? .themeAccentDark : .themeAmber)
+            // 右侧：已收月数 + 累计水电 + 收租状态
+            VStack(alignment: .trailing, spacing: 3) {
+                Text("已收\(paidMonthsCount)个月")
+                    .font(.system(size: 10.5))
+                    .foregroundColor(.themeText2)
+                Text("累计水电¥\(Int(totalUtility))")
+                    .font(.system(size: 10.5))
+                    .foregroundColor(.themeText2)
+                let paid = property.monthlyRentRecords.contains { $0.month == currentMonth && $0.isPaid }
+                HStack(spacing: 4) {
+                    Image(systemName: paid ? "checkmark.circle.fill" : "circle")
+                        .foregroundColor(paid ? .themeAccent : .themeText3)
+                        .font(.system(size: 16))
+                    Text(paid ? "已收" : "待收")
+                        .font(.system(size: 11))
+                        .foregroundColor(paid ? .themeAccentDark : .themeAmber)
+                }
             }
         }
         .padding(14)
@@ -404,7 +442,7 @@ struct MonthRentRow: View {
         self.label = label
         let record = property.monthlyRentRecords.first { $0.month == month }
         let amt = record?.amount ?? property.rent
-        _amountText = State(initialValue: amt > 0 ? String(amt) : "")
+        _amountText = State(initialValue: amt > 0 ? String(Int(amt)) : "")
         _isPaid = State(initialValue: record?.isPaid ?? false)
     }
 
@@ -461,8 +499,8 @@ struct QuarterUtilityRow: View {
         self.quarter = quarter
         self.label = label
         let record = property.quarterlyUtilityRecords.first { $0.quarter == quarter }
-        _electricText = State(initialValue: (record?.electricAmount ?? 0) > 0 ? String(record?.electricAmount ?? 0) : "")
-        _waterText = State(initialValue: (record?.waterAmount ?? 0) > 0 ? String(record?.waterAmount ?? 0) : "")
+        _electricText = State(initialValue: (record?.electricAmount ?? 0) > 0 ? String(Int(record?.electricAmount ?? 0)) : "")
+        _waterText = State(initialValue: (record?.waterAmount ?? 0) > 0 ? String(Int(record?.waterAmount ?? 0)) : "")
         _isSettled = State(initialValue: record?.isSettled ?? false)
     }
 
@@ -545,7 +583,7 @@ struct AddPropertyView: View {
     @State private var notes: String
 
     private let unitTypes = ["单间上层","单间下层","独立厨房上层","独立厨房下层","复式","中空复式","平层","双钥匙一套","三房"]
-    private let types = ["普通","包租","托管"]
+    private let types = ["管理","包租","托管"]
 
     init(property: Property? = nil) {
         editingProperty = property
@@ -563,7 +601,7 @@ struct AddPropertyView: View {
         _rentDueDay = State(initialValue: property?.rentDueDay ?? 1)
         _waterMeterText = State(initialValue: property.map { $0.waterMeterBase > 0 ? String($0.waterMeterBase) : "" } ?? "")
         _electricMeterText = State(initialValue: property.map { $0.electricMeterBase > 0 ? String($0.electricMeterBase) : "" } ?? "")
-        _propertyType = State(initialValue: property?.propertyType ?? "普通")
+        _propertyType = State(initialValue: property?.propertyType ?? "管理")
         _notes = State(initialValue: property?.notes ?? "")
     }
 
