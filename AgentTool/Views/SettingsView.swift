@@ -158,7 +158,7 @@ struct SettingsView: View {
                 }
             } message: {
                 if let type = clearType {
-                    Text(type == .total ? "确定要清空所有数据吗？此操作不可恢复，建议先备份数据。" : "确定要清空\(type.rawValue)吗？此操作不可恢复。")
+                    Text(type == .total ? "确定要清空所有数据吗？此操作不可恢复，建议先备份数据。" : "确定要清空\(type == .deals ? "成交数据" : type == .properties ? "收租数据" : "包租数据")吗？此操作不可恢复。")
                 } else {
                     Text("")
                 }

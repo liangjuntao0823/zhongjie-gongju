@@ -76,21 +76,27 @@ struct RentCollectionView: View {
 
                 List {
                     ForEach(filteredProperties) { prop in
-                        SwipeActionRow(actions: [
-                            SwipeActionItem(title: "修改", icon: "pencil", color: .themeBlue) { editingProperty = prop },
-                            SwipeActionItem(title: "删除", icon: "trash", color: .themeRed) {
-                                if let idx = filteredProperties.firstIndex(where: { $0.id == prop.id }) {
-                                    modelContext.delete(filteredProperties[idx])
+                        PropertyRentRow(property: prop)
+                            .contentShape(Rectangle())
+                            .onTapGesture { selectedProperty = prop }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    if let idx = filteredProperties.firstIndex(where: { $0.id == prop.id }) {
+                                        modelContext.delete(filteredProperties[idx])
+                                    }
+                                } label: {
+                                    Label("删除", systemImage: "trash")
                                 }
+                                Button {
+                                    editingProperty = prop
+                                } label: {
+                                    Label("修改", systemImage: "pencil")
+                                }
+                                .tint(.themeBlue)
                             }
-                        ]) {
-                            PropertyRentRow(property: prop)
-                                .contentShape(Rectangle())
-                                .onTapGesture { selectedProperty = prop }
-                        }
-                        .listRowBackground(Color.themeBg)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                            .listRowBackground(Color.themeBg)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
                     }
                 }
                 .id(refreshID)

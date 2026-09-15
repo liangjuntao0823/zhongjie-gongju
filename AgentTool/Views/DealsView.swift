@@ -373,21 +373,27 @@ struct DealsView: View {
     private var dealList: some View {
         List {
             ForEach(filteredDeals) { deal in
-                SwipeActionRow(actions: [
-                    SwipeActionItem(title: "修改", icon: "pencil", color: .themeBlue) { editingDeal = deal },
-                    SwipeActionItem(title: "删除", icon: "trash", color: .themeRed) {
-                        if let idx = filteredDeals.firstIndex(where: { $0.id == deal.id }) {
-                            modelContext.delete(filteredDeals[idx])
+                DealRow(deal: deal)
+                    .contentShape(Rectangle())
+                    .onTapGesture { editingDeal = deal }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            if let idx = filteredDeals.firstIndex(where: { $0.id == deal.id }) {
+                                modelContext.delete(filteredDeals[idx])
+                            }
+                        } label: {
+                            Label("删除", systemImage: "trash")
                         }
+                        Button {
+                            editingDeal = deal
+                        } label: {
+                            Label("修改", systemImage: "pencil")
+                        }
+                        .tint(.themeBlue)
                     }
-                ]) {
-                    DealRow(deal: deal)
-                        .contentShape(Rectangle())
-                        .onTapGesture { editingDeal = deal }
-                }
-                .listRowBackground(Color.themeBg)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                    .listRowBackground(Color.themeBg)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
             }
         }
         .listStyle(.plain)
@@ -403,21 +409,27 @@ struct DealsView: View {
     private var incomeList: some View {
         List {
             ForEach(filteredIncomes) { inc in
-                SwipeActionRow(actions: [
-                    SwipeActionItem(title: "修改", icon: "pencil", color: .themeBlue) { editingIncome = inc },
-                    SwipeActionItem(title: "删除", icon: "trash", color: .themeRed) {
-                        if let idx = filteredIncomes.firstIndex(where: { $0.id == inc.id }) {
-                            modelContext.delete(filteredIncomes[idx])
+                MiscRow(title: inc.item, subtitle: inc.notes, amount: inc.amount, date: inc.date, isIncome: true)
+                    .contentShape(Rectangle())
+                    .onTapGesture { editingIncome = inc }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            if let idx = filteredIncomes.firstIndex(where: { $0.id == inc.id }) {
+                                modelContext.delete(filteredIncomes[idx])
+                            }
+                        } label: {
+                            Label("删除", systemImage: "trash")
                         }
+                        Button {
+                            editingIncome = inc
+                        } label: {
+                            Label("修改", systemImage: "pencil")
+                        }
+                        .tint(.themeBlue)
                     }
-                ]) {
-                    MiscRow(title: inc.item, subtitle: inc.notes, amount: inc.amount, date: inc.date, isIncome: true)
-                        .contentShape(Rectangle())
-                        .onTapGesture { editingIncome = inc }
-                }
-                .listRowBackground(Color.themeBg)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                    .listRowBackground(Color.themeBg)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
             }
         }
         .listStyle(.plain)
@@ -425,7 +437,7 @@ struct DealsView: View {
         .background(Color.themeBg)
         .overlay {
             if filteredIncomes.isEmpty {
-                ContentUnavailableView("暂无收入记录", systemImage: "arrow.down.circle", description: Text("点击右上角 + 添加收入"))
+                ContentUnavailableView("暂无杂项收入", systemImage: "plus.circle", description: Text("点击右上角 + 添加收入"))
             }
         }
     }
@@ -433,21 +445,27 @@ struct DealsView: View {
     private var expenseList: some View {
         List {
             ForEach(filteredExpenses) { exp in
-                SwipeActionRow(actions: [
-                    SwipeActionItem(title: "修改", icon: "pencil", color: .themeBlue) { editingExpense = exp },
-                    SwipeActionItem(title: "删除", icon: "trash", color: .themeRed) {
-                        if let idx = filteredExpenses.firstIndex(where: { $0.id == exp.id }) {
-                            modelContext.delete(filteredExpenses[idx])
+                MiscRow(title: exp.item, subtitle: exp.notes, amount: exp.amount, date: exp.date, isIncome: false)
+                    .contentShape(Rectangle())
+                    .onTapGesture { editingExpense = exp }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            if let idx = filteredExpenses.firstIndex(where: { $0.id == exp.id }) {
+                                modelContext.delete(filteredExpenses[idx])
+                            }
+                        } label: {
+                            Label("删除", systemImage: "trash")
                         }
+                        Button {
+                            editingExpense = exp
+                        } label: {
+                            Label("修改", systemImage: "pencil")
+                        }
+                        .tint(.themeBlue)
                     }
-                ]) {
-                    MiscRow(title: exp.item, subtitle: exp.notes, amount: exp.amount, date: exp.date, isIncome: false)
-                        .contentShape(Rectangle())
-                        .onTapGesture { editingExpense = exp }
-                }
-                .listRowBackground(Color.themeBg)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                    .listRowBackground(Color.themeBg)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
             }
         }
         .listStyle(.plain)
@@ -500,56 +518,75 @@ struct DealRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 3) {
-                // 第一行：房号+租金+押金
-                HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
+                // 第一行：房号+房东+户型
+                HStack(spacing: 6) {
                     Text(deal.roomNumber)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.themeText)
-                    Text("¥\(Int(deal.rent))/月")
-                        .font(.system(size: 11))
-                        .foregroundColor(.themeText2)
-                    Text("押金¥\(Int(deal.deposit))")
-                        .font(.system(size: 11))
-                        .foregroundColor(.themeText2)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color(hex: "F0F0F0"))
+                        .cornerRadius(6)
+                    if !deal.landlord.isEmpty {
+                        Text("房东：\(deal.landlord)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.themeText2)
+                    }
+                    if !deal.unitType.isEmpty {
+                        Text("户型：\(deal.unitType)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.themeText2)
+                    }
                 }
-                // 第二行：户型+房东+交租日
-                HStack(spacing: 8) {
-                    Text(deal.unitType)
-                        .font(.system(size: 11))
-                        .foregroundColor(.themeText3)
-                    Text("房东: \(deal.landlord)")
-                        .font(.system(size: 11))
-                        .foregroundColor(.themeText3)
+                // 第二行：交租日+月租+押金
+                HStack(spacing: 6) {
                     if let day = deal.rentDueDay {
-                        Text("每月\(day)号交租")
-                            .font(.system(size: 11))
-                            .foregroundColor(.themeText3)
+                        Text("\(day)号交租")
+                            .font(.system(size: 12))
+                            .foregroundColor(.themeText2)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color(hex: "FDF0F0"))
+                            .cornerRadius(6)
+                    }
+                    if deal.rent > 0 {
+                        Text("月租¥\(Int(deal.rent))/月")
+                            .font(.system(size: 12))
+                            .foregroundColor(.themeText2)
+                    }
+                    if deal.deposit > 0 {
+                        Text("押金¥\(Int(deal.deposit))")
+                            .font(.system(size: 12))
+                            .foregroundColor(.themeText2)
                     }
                 }
                 // 第三行：备注
                 if !deal.notes.isEmpty {
-                    Text(deal.notes)
-                        .font(.system(size: 10.5))
+                    Text("备注：\(deal.notes)")
+                        .font(.system(size: 12))
                         .foregroundColor(.themeAmber)
                         .lineLimit(1)
                 }
             }
             Spacer()
-            VStack(alignment: .trailing, spacing: 3) {
+            VStack(alignment: .trailing, spacing: 4) {
                 Text("+¥\(Int(deal.totalFee))")
                     .foregroundColor(.themeAccentDark)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 16, weight: .bold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color(hex: "E2F4EF"))
+                    .cornerRadius(8)
                 Text(deal.date, style: .date)
-                    .font(.system(size: 10.5))
+                    .font(.system(size: 12))
                     .foregroundColor(.themeText3)
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
         .background(Color.themePanel)
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.themeBorder, lineWidth: 1))
     }
 }
 
@@ -562,38 +599,44 @@ struct MiscRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
+            // 左边圆形图标
             ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(isIncome ? Color.themeAccentWeak : Color(hex: "FDF0F0"))
-                    .frame(width: 44, height: 44)
-                Image(systemName: isIncome ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
-                    .foregroundColor(isIncome ? .themeAccentDark : .themeRed)
-                    .font(.system(size: 18))
+                Circle()
+                    .fill(isIncome ? Color(hex: "0FA48B") : Color(hex: "E05555"))
+                    .frame(width: 48, height: 48)
+                Text(isIncome ? "收" : "支")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.white)
             }
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.themeText)
                 if !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(.system(size: 11))
-                        .foregroundColor(.themeText3)
+                    Text("备注：\(subtitle)")
+                        .font(.system(size: 12))
+                        .foregroundColor(.themeAmber)
+                        .lineLimit(1)
                 }
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 4) {
                 Text("\(isIncome ? "+" : "-")¥\(Int(amount))")
                     .foregroundColor(isIncome ? .themeAccentDark : .themeRed)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 16, weight: .bold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(isIncome ? Color(hex: "E2F4EF") : Color(hex: "FDF0F0"))
+                    .cornerRadius(8)
                 Text(date, style: .date)
-                    .font(.system(size: 11))
+                    .font(.system(size: 12))
                     .foregroundColor(.themeText3)
             }
         }
-        .padding(14)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .background(Color.themePanel)
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.themeBorder, lineWidth: 1))
     }
 }
 

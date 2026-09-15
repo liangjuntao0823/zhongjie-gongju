@@ -209,21 +209,20 @@ struct DashboardView: View {
             .padding(.top, 8)
 
             // 时间卡片（固定）
-            VStack(spacing: 6) {
+            VStack(spacing: 4) {
                 Text(timeString)
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.white)
                     .fontDesign(.rounded)
                 Text(dateString)
-                    .font(.system(size: 13))
+                    .font(.system(size: 12))
                     .foregroundColor(.white.opacity(0.9))
                 Text("本月还剩\(daysRemainingInMonth)天，加油！")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.white.opacity(0.9))
-                    .padding(.top, 2)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .padding(.vertical, 8)
             .background(
                 LinearGradient(gradient: Gradient(colors: [Color.themeAccent, Color.themeAccentDark]),
                                startPoint: .topLeading, endPoint: .bottomTrailing)

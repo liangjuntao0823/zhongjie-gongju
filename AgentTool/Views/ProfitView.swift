@@ -90,11 +90,18 @@ struct ProfitView: View {
                     .padding(.horizontal)
                     .padding(.top, 8)
 
-                    // 年度汇总卡片
-                    HStack(spacing: 10) {
-                        SummaryCard(title: "成交", value: "\(yearTotal.dealCount)单", color: .themeAccentDark)
-                        SummaryCard(title: "中介费", value: "¥\(Int(yearTotal.agentFee))", color: .themeAccentDark)
-                        SummaryCard(title: "净收入", value: "¥\(Int(yearTotal.netIncome))", color: yearTotal.netIncome >= 0 ? .themeAccentDark : .themeRed)
+                    // 年度汇总卡片 - 两行布局
+                    VStack(spacing: 10) {
+                        HStack(spacing: 10) {
+                            SummaryCard(title: "成交", value: "\(yearTotal.dealCount)单", color: .themeAccentDark)
+                            SummaryCard(title: "中介费", value: "¥\(Int(yearTotal.agentFee))", color: .themeAccentDark)
+                            SummaryCard(title: "杂收", value: "¥\(Int(yearTotal.miscIncome))", color: .themeAccentDark)
+                        }
+                        HStack(spacing: 10) {
+                            SummaryCard(title: "杂支", value: "¥\(Int(yearTotal.miscExpense))", color: .themeRed)
+                            SummaryCard(title: "净收入", value: "¥\(Int(yearTotal.netIncome))", color: yearTotal.netIncome >= 0 ? .themeAccentDark : .themeRed)
+                            Color.clear.frame(maxWidth: .infinity)
+                        }
                     }
                     .padding(.horizontal)
 
@@ -179,14 +186,13 @@ struct SummaryCard: View {
     let color: Color
 
     var body: some View {
-        VStack(spacing: 4) {
-            Text(title).font(.system(size: 11)).foregroundColor(.themeText2)
-            Text(value).font(.system(size: 16, weight: .bold)).foregroundColor(color).minimumScaleFactor(0.5).lineLimit(1)
+        VStack(spacing: 6) {
+            Text(title).font(.system(size: 13, weight: .medium)).foregroundColor(.themeText2)
+            Text(value).font(.system(size: 20, weight: .bold)).foregroundColor(color).minimumScaleFactor(0.5).lineLimit(1)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
+        .padding(.vertical, 16)
         .background(Color.themePanel)
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.themeBorder, lineWidth: 1))
     }
 }
