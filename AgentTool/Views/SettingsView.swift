@@ -1,4 +1,4 @@
-import SwiftUI
+﻿import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
@@ -15,8 +15,13 @@ struct SettingsView: View {
     @State private var backupHour = 23
     @State private var clearType: DataBackupManager.BackupType? = nil
     @State private var showClearConfirm = false
+    @State private var showVersionHistory = false
 
     private let backupManager = DataBackupManager.shared
+
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "2.26"
+    }
 
     var body: some View {
         NavigationStack {
@@ -36,7 +41,7 @@ struct SettingsView: View {
                                 .foregroundColor(.themeText3)
                         }
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, 10)
                         .background(Color(hex: "F2F2F7"))
                         .cornerRadius(12)
                     }
@@ -57,7 +62,7 @@ struct SettingsView: View {
                                 .foregroundColor(.themeText3)
                         }
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, 10)
                         .background(Color(hex: "F2F2F7"))
                         .cornerRadius(12)
                     }
@@ -78,7 +83,7 @@ struct SettingsView: View {
                                 .foregroundColor(.themeText3)
                         }
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, 10)
                         .background(Color(hex: "F2F2F7"))
                         .cornerRadius(12)
                     }
@@ -99,7 +104,7 @@ struct SettingsView: View {
                                 .foregroundColor(.white.opacity(0.7))
                         }
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, 10)
                         .background(Color.red)
                         .cornerRadius(12)
                     }
@@ -117,7 +122,7 @@ struct SettingsView: View {
                             .labelsHidden()
                     }
                     .padding(.horizontal, 14)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 10)
                     .background(Color(hex: "F2F2F7"))
                     .cornerRadius(12)
                     .listRowBackground(Color.clear)
@@ -137,7 +142,7 @@ struct SettingsView: View {
                             .labelsHidden()
                         }
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, 10)
                         .background(Color(hex: "F2F2F7"))
                         .cornerRadius(12)
                         .listRowBackground(Color.clear)
@@ -155,7 +160,7 @@ struct SettingsView: View {
                             .labelsHidden()
                         }
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, 10)
                         .background(Color(hex: "F2F2F7"))
                         .cornerRadius(12)
                         .listRowBackground(Color.clear)
@@ -177,7 +182,7 @@ struct SettingsView: View {
                         Text("中介管家").foregroundColor(.themeText2)
                     }
                     .padding(.horizontal, 14)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 10)
                     .background(Color(hex: "F2F2F7"))
                     .cornerRadius(12)
                     .listRowBackground(Color.clear)
@@ -185,10 +190,10 @@ struct SettingsView: View {
                     HStack {
                         Text("版本")
                         Spacer()
-                        Text("2.23").foregroundColor(.themeText2)
+                        Text(appVersion).foregroundColor(.themeText2)
                     }
                     .padding(.horizontal, 14)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 10)
                     .background(Color(hex: "F2F2F7"))
                     .cornerRadius(12)
                     .listRowBackground(Color.clear)
@@ -199,7 +204,7 @@ struct SettingsView: View {
                         Text("豆包And涛哥").foregroundColor(.themeText2)
                     }
                     .padding(.horizontal, 14)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 10)
                     .background(Color(hex: "F2F2F7"))
                     .cornerRadius(12)
                     .listRowBackground(Color.clear)
@@ -211,7 +216,7 @@ struct SettingsView: View {
                             .font(.system(size: 14))
                     }
                     .padding(.horizontal, 14)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 10)
                     .background(Color(hex: "F2F2F7"))
                     .cornerRadius(12)
                     .listRowBackground(Color.clear)
@@ -223,28 +228,34 @@ struct SettingsView: View {
                             .font(.system(size: 14))
                     }
                     .padding(.horizontal, 14)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 10)
                     .background(Color(hex: "F2F2F7"))
                     .cornerRadius(12)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
 
-                    NavigationLink(destination: VersionHistoryView()) {
+                    Button {
+                        showVersionHistory = true
+                    } label: {
                         HStack {
                             Text("版本更新介绍")
                                 .foregroundColor(.themeText)
                             Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.themeText3)
+                                .font(.system(size: 12))
                         }
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, 10)
                         .background(Color(hex: "F2F2F7"))
                         .cornerRadius(12)
                     }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                    .buttonStyle(.plain)
                 }
             }
-            .listRowSpacing(2)
+            .listRowSpacing(0)
             .scrollContentBackground(.hidden)
             .background(Color.white)
             .navigationTitle("设置")
@@ -291,6 +302,9 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showExcelConvert) {
                 ExcelConvertView()
+            }
+            .sheet(isPresented: $showVersionHistory) {
+                VersionHistoryView()
             }
         }
     }

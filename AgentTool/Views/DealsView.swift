@@ -561,18 +561,19 @@ struct DealRow: View {
                             .cornerRadius(.infinity)
                     }
                 }
-                // 第三行：备注
-                if !deal.notes.isEmpty {
-                    Text("备注：\(deal.notes)")
-                        .font(.system(size: 12))
-                        .foregroundColor(.themeText2)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Color(hex: "F3E5F5"))
-                        .cornerRadius(.infinity)
-                        .lineLimit(1)
-                }
+                // 第三行：备注（始终显示）
+                Text("备注：\(deal.notes.isEmpty ? "无" : deal.notes)")
+                    .font(.system(size: 12))
+                    .foregroundColor(.themeText2)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color(hex: "F3E5F5"))
+                    .cornerRadius(.infinity)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .frame(minHeight: 72)
             Spacer()
             VStack(alignment: .trailing, spacing: 8) {
                 Text("+¥\(Int(deal.totalFee))")
