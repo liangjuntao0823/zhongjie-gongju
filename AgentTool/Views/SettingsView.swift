@@ -368,135 +368,117 @@ struct ExcelConvertView: View {
 
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                // 读取XLSX文件
                 guard url.startAccessingSecurityScopedResource() else {
                     throw NSError(domain: "ExcelConvert", code: -1, userInfo: [NSLocalizedDescriptionKey: "无法访问文件"])
                 }
                 defer { url.stopAccessingSecurityScopedResource() }
 
-                let file = try XLSXFile(filepath: url.path)
-                guard let xlsxFile = file else {
-                    throw NSError(domain: "ExcelConvert", code: -2, userInfo: [NSLocalizedDescriptionKey: "无法打开Excel文件"])
-                }
+                let parser = try XLSXParser(fileURL: url)
+                let sheets = try parser.parse()
+
                 var deals: [[String: Any]] = []
                 var incomes: [[String: Any]] = []
                 var expenses: [[String: Any]] = []
                 var properties: [[String: Any]] = []
 
-                for wbk in try xlsxFile.parseWorkbooks() {
-                    for (name, path) in try xlsxFile.parseWorksheetPathsAndNames(workbook: wbk) {
-                        let worksheet = try xlsxFile.parseWorksheet(at: path)
-                        let rows = worksheet.data?.rows ?? []
-                        guard rows.count > 1 else { continue }
+                for (sheetName, rows) in sheets {
+                    guard rows.count > 1 else { continue }
 
-                        let sheetName = name ?? ""
+                    if sheetName.contains("成交") {
+                        for i in 1..<rows.count {
+                            let cells = rows[i]
+                            guard cells.count > 1, !cells[1].isEmpty else { continue }
+                            let deal: [String: Any] = [
+                                "date": self.dateString(cells[safe: 0] ?? ""),
+                                "roomNumber": cells[safe: 1] ?? "",
+                                "landlord": cells[safe: 2] ?? "",
+                                "unitType": cells[safe: 3] ?? "",
+                                "leaseStart": self.dateString(cells[safe: 4] ?? ""),
+                                "leaseEnd": self.dateString(cells[safe: 5] ?? ""),
+                                "leaseDuration": cells[safe: 6] ?? "",
+                                "rent": self.doubleValue(cells[safe: 7] ?? ""),
+                                "deposit": self.doubleValue(cells[safe: 8] ?? ""),
+                                "prepayment": self.doubleValue(cells[safe: 9] ?? ""),
+                                "rentDueDay": self.intValue(cells[safe: 10] ?? ""),
+                                "agentFeeLandlord": self.doubleValue(cells[safe: 11] ?? ""),
+                                "agentFeeTenant": self.doubleValue(cells[safe: 12] ?? ""),
+                                "totalFee": self.doubleValue(cells[safe: 13] ?? ""),
+                                "manager": cells[safe: 14] ?? "",
+                                "source": cells[safe: 15] ?? "",
+                                "notes": cells[safe: 16] ?? ""
+                            ]
+                            deals.append(deal)
+                        }
+                    } else if sheetName.contains("收入") {
+                        for i in 1..<rows.count {
+                            let cells = rows[i]
+                            guard cells.count > 1, !cells[1].isEmpty else { continue }
+                            let income: [String: Any] = [
+                                "date": self.dateString(cells[safe: 0] ?? ""),
+                                "item": cells[safe: 1] ?? "",
+                                "amount": self.doubleValue(cells[safe: 2] ?? ""),
+                                "notes": cells[safe: 3] ?? ""
+                            ]
+                            incomes.append(income)
+                        }
+                    } else if sheetName.contains("支出") {
+                        for i in 1..<rows.count {
+                            let cells = rows[i]
+                            guard cells.count > 1, !cells[1].isEmpty else { continue }
+                            let expense: [String: Any] = [
+                                "date": self.dateString(cells[safe: 0] ?? ""),
+                                "item": cells[safe: 1] ?? "",
+                                "amount": self.doubleValue(cells[safe: 2] ?? ""),
+                                "notes": cells[safe: 3] ?? ""
+                            ]
+                            expenses.append(expense)
+                        }
+                    } else if sheetName.contains("收租") || sheetName.contains("交租") {
+                        for i in 1..<rows.count {
+                            let cells = rows[i]
+                            guard cells.count > 1, !cells[1].isEmpty else { continue }
 
-                        // 解析成交记录
-                        if sheetName.contains("成交") {
-                            for i in 1..<rows.count {
-                                let cells = rows[i].cells
-                                guard cells.count > 1, let room = cells[safe: 1]?.value else { continue }
-                                let deal: [String: Any] = [
-                                    "date": self.cellDateString(cells[safe: 0]?.value),
-                                    "roomNumber": self.cellString(room),
-                                    "landlord": self.cellString(cells[safe: 2]?.value),
-                                    "unitType": self.cellString(cells[safe: 3]?.value),
-                                    "leaseStart": self.cellDateString(cells[safe: 4]?.value),
-                                    "leaseEnd": self.cellDateString(cells[safe: 5]?.value),
-                                    "leaseDuration": self.cellString(cells[safe: 6]?.value),
-                                    "rent": self.cellDouble(cells[safe: 7]?.value),
-                                    "deposit": self.cellDouble(cells[safe: 8]?.value),
-                                    "prepayment": self.cellDouble(cells[safe: 9]?.value),
-                                    "rentDueDay": self.cellInt(cells[safe: 10]?.value),
-                                    "agentFeeLandlord": self.cellDouble(cells[safe: 11]?.value),
-                                    "agentFeeTenant": self.cellDouble(cells[safe: 12]?.value),
-                                    "totalFee": self.cellDouble(cells[safe: 13]?.value),
-                                    "manager": self.cellString(cells[safe: 14]?.value),
-                                    "source": self.cellString(cells[safe: 15]?.value),
-                                    "notes": self.cellString(cells[safe: 16]?.value)
-                                ]
-                                deals.append(deal)
-                            }
-                        }
-                        // 解析杂项收入
-                        else if sheetName.contains("收入") {
-                            for i in 1..<rows.count {
-                                let cells = rows[i].cells
-                                guard cells.count > 1, let item = cells[safe: 1]?.value else { continue }
-                                let income: [String: Any] = [
-                                    "date": self.cellDateString(cells[safe: 0]?.value),
-                                    "item": self.cellString(item),
-                                    "amount": self.cellDouble(cells[safe: 2]?.value),
-                                    "notes": self.cellString(cells[safe: 3]?.value)
-                                ]
-                                incomes.append(income)
-                            }
-                        }
-                        // 解析杂项支出
-                        else if sheetName.contains("支出") {
-                            for i in 1..<rows.count {
-                                let cells = rows[i].cells
-                                guard cells.count > 1, let item = cells[safe: 1]?.value else { continue }
-                                let expense: [String: Any] = [
-                                    "date": self.cellDateString(cells[safe: 0]?.value),
-                                    "item": self.cellString(item),
-                                    "amount": self.cellDouble(cells[safe: 2]?.value),
-                                    "notes": self.cellString(cells[safe: 3]?.value)
-                                ]
-                                expenses.append(expense)
-                            }
-                        }
-                        // 解析收租表
-                        else if sheetName.contains("收租") || sheetName.contains("交租") {
-                            for i in 1..<rows.count {
-                                let cells = rows[i].cells
-                                guard cells.count > 1, let room = cells[safe: 1]?.value else { continue }
-
-                                var monthly: [[String: Any]] = []
-                                for m in 0..<12 {
-                                    if let val = cells[safe: 14 + m]?.value {
-                                        let amt = self.cellDouble(val)
-                                        if amt > 0 {
-                                            monthly.append(["month": m + 1, "amount": amt, "isPaid": true])
-                                        }
-                                    }
+                            var monthly: [[String: Any]] = []
+                            for m in 0..<12 {
+                                let val = cells[safe: 14 + m] ?? ""
+                                let amt = self.doubleValue(val)
+                                if amt > 0 {
+                                    monthly.append(["month": m + 1, "amount": amt, "isPaid": true])
                                 }
-
-                                var quarterly: [[String: Any]] = []
-                                for q in 0..<4 {
-                                    if let val = cells[safe: 26 + q]?.value {
-                                        let amt = self.cellDouble(val)
-                                        if amt > 0 {
-                                            quarterly.append(["quarter": q + 1, "electricAmount": 0, "waterAmount": amt, "isSettled": true])
-                                        }
-                                    }
-                                }
-
-                                let prop: [String: Any] = [
-                                    "rentDueDay": self.cellInt(cells[safe: 0]?.value),
-                                    "roomNumber": self.cellString(room),
-                                    "landlord": self.cellString(cells[safe: 2]?.value),
-                                    "unitType": self.cellString(cells[safe: 3]?.value),
-                                    "leaseStart": self.cellDateString(cells[safe: 4]?.value),
-                                    "leaseEnd": self.cellDateString(cells[safe: 5]?.value),
-                                    "leaseDuration": self.cellString(cells[safe: 6]?.value),
-                                    "rent": self.cellDouble(cells[safe: 7]?.value),
-                                    "prepayment": self.cellDouble(cells[safe: 8]?.value),
-                                    "deposit": self.cellDouble(cells[safe: 9]?.value),
-                                    "waterMeterBase": self.cellInt(cells[safe: 10]?.value),
-                                    "electricMeterBase": self.cellInt(cells[safe: 11]?.value),
-                                    "propertyType": self.cellString(cells[safe: 12]?.value) ?? "管理",
-                                    "notes": self.cellString(cells[safe: 13]?.value),
-                                    "monthlyRentRecords": monthly,
-                                    "quarterlyUtilityRecords": quarterly
-                                ]
-                                properties.append(prop)
                             }
+
+                            var quarterly: [[String: Any]] = []
+                            for q in 0..<4 {
+                                let val = cells[safe: 26 + q] ?? ""
+                                let amt = self.doubleValue(val)
+                                if amt > 0 {
+                                    quarterly.append(["quarter": q + 1, "electricAmount": 0, "waterAmount": amt, "isSettled": true])
+                                }
+                            }
+
+                            let prop: [String: Any] = [
+                                "rentDueDay": self.intValue(cells[safe: 0] ?? ""),
+                                "roomNumber": cells[safe: 1] ?? "",
+                                "landlord": cells[safe: 2] ?? "",
+                                "unitType": cells[safe: 3] ?? "",
+                                "leaseStart": self.dateString(cells[safe: 4] ?? ""),
+                                "leaseEnd": self.dateString(cells[safe: 5] ?? ""),
+                                "leaseDuration": cells[safe: 6] ?? "",
+                                "rent": self.doubleValue(cells[safe: 7] ?? ""),
+                                "prepayment": self.doubleValue(cells[safe: 8] ?? ""),
+                                "deposit": self.doubleValue(cells[safe: 9] ?? ""),
+                                "waterMeterBase": self.intValue(cells[safe: 10] ?? ""),
+                                "electricMeterBase": self.intValue(cells[safe: 11] ?? ""),
+                                "propertyType": cells[safe: 12] ?? "管理",
+                                "notes": cells[safe: 13] ?? "",
+                                "monthlyRentRecords": monthly,
+                                "quarterlyUtilityRecords": quarterly
+                            ]
+                            properties.append(prop)
                         }
                     }
                 }
 
-                // 组装数据
                 let dict: [String: Any] = [
                     "deals": deals,
                     "incomes": incomes,
@@ -522,50 +504,33 @@ struct ExcelConvertView: View {
         }
     }
 
-    // MARK: - Cell解析辅助
-    private func cellString(_ value: Any?) -> String {
-        guard let v = value else { return "" }
-        if let s = v as? String { return s }
-        if let n = v as? NSNumber { return n.stringValue }
-        return "\(v)"
-    }
-
-    private func cellDouble(_ value: Any?) -> Double {
-        guard let v = value else { return 0 }
-        if let n = v as? NSNumber { return n.doubleValue }
-        if let s = v as? String, let d = Double(s) { return d }
+    // MARK: - 解析辅助
+    private func doubleValue(_ s: String) -> Double {
+        if let d = Double(s) { return d }
         return 0
     }
 
-    private func cellInt(_ value: Any?) -> Int {
-        guard let v = value else { return 0 }
-        if let n = v as? NSNumber { return n.intValue }
-        if let s = v as? String, let i = Int(s) { return i }
+    private func intValue(_ s: String) -> Int {
+        if let i = Int(s) { return i }
+        if let d = Double(s) { return Int(d) }
         return 0
     }
 
-    private func cellDateString(_ value: Any?) -> String {
-        guard let v = value else { return "" }
-        if let s = v as? String {
-            // 处理中文日期格式
-            let cleaned = s.replacingOccurrences(of: "年", with: "-")
-                .replacingOccurrences(of: "月", with: "-")
-                .replacingOccurrences(of: "日", with: "")
-            return cleaned
+    private func dateString(_ s: String) -> String {
+        if s.isEmpty { return "" }
+        // 中文日期格式
+        var cleaned = s.replacingOccurrences(of: "年", with: "-")
+            .replacingOccurrences(of: "月", with: "-")
+            .replacingOccurrences(of: "日", with: "")
+        // Excel日期序列号
+        if let days = Double(cleaned), days > 20000 && days < 60000 {
+            let baseDate = Date(timeIntervalSince1970: -2209161600)
+            let date = baseDate.addingTimeInterval(days * 86400)
+            let df = DateFormatter()
+            df.dateFormat = "yyyy-MM-dd"
+            return df.string(from: date)
         }
-        if let n = v as? NSNumber {
-            // Excel日期序列号转换
-            let days = n.doubleValue
-            if days > 20000 && days < 60000 {
-                let baseDate = Date(timeIntervalSince1970: -2209161600) // 1900-01-01
-                let date = baseDate.addingTimeInterval(days * 86400)
-                let df = DateFormatter()
-                df.dateFormat = "yyyy-MM-dd"
-                return df.string(from: date)
-            }
-            return n.stringValue
-        }
-        return ""
+        return cleaned
     }
 
     private func saveBackup(_ data: Data, type: DataBackupManager.BackupType) {
