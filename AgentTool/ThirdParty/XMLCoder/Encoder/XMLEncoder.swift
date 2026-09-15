@@ -1,4 +1,4 @@
-// Copyright © 2017-2021 Shawn Moore and XMLCoder contributors.
+﻿// Copyright © 2017-2021 Shawn Moore and XMLCoder contributors.
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT

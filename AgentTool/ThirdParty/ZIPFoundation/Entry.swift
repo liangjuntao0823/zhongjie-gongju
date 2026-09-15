@@ -1,4 +1,4 @@
-//
+﻿//
 //  Entry.swift
 //  ZIPFoundation
 //

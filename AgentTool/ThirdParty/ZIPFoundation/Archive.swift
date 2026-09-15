@@ -1,4 +1,4 @@
-//
+﻿//
 //  Archive.swift
 //  ZIPFoundation
 //

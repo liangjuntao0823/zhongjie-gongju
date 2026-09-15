@@ -1,4 +1,4 @@
-//
+﻿//
 //  Data+Compression.swift
 //  ZIPFoundation
 //

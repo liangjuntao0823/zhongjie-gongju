@@ -1,4 +1,4 @@
-//
+﻿//
 //  XMLBothNode.swift
 //  XMLCoder
 //

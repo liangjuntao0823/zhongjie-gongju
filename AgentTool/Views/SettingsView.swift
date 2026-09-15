@@ -1,7 +1,6 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
-import CoreXLSX
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext

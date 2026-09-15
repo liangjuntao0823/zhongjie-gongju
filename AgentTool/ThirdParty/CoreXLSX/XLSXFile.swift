@@ -1,4 +1,4 @@
-// Copyright 2020 CoreOffice contributors
+﻿// Copyright 2020 CoreOffice contributors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,8 +16,7 @@
 //
 
 import Foundation
-import XMLCoder
-import ZIPFoundation
+
 
 @available(*, deprecated, renamed: "CoreXLSXError")
 public typealias XLSXReaderError = CoreXLSXError

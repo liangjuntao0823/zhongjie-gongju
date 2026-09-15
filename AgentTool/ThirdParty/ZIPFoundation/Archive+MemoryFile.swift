@@ -1,4 +1,4 @@
-//
+﻿//
 //  Archive+MemoryFile.swift
 //  ZIPFoundation
 //

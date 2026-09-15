@@ -1,4 +1,4 @@
-//
+﻿//
 //  XMLElementNode.swift
 //  XMLCoder
 //

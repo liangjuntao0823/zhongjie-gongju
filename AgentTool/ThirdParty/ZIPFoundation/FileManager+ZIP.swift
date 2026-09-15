@@ -1,4 +1,4 @@
-//
+﻿//
 //  FileManager+ZIP.swift
 //  ZIPFoundation
 //

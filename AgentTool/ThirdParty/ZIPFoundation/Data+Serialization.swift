@@ -1,4 +1,4 @@
-//
+﻿//
 //  Data+Serialization.swift
 //  ZIPFoundation
 //
