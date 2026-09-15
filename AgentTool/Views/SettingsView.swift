@@ -350,7 +350,7 @@ struct ExcelConvertView: View {
                         .foregroundColor(.themeAccent)
                 }
             }
-            .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.spreadsheet, .xlsx]) { result in
+            .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.spreadsheet]) { result in
                 switch result {
                 case .success(let url):
                     convertExcel(url)
