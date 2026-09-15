@@ -67,6 +67,21 @@ struct SettingsView: View {
                         }
                         .listRowBackground(Color.red)
                     }
+
+                    Button {
+                        importInitialData()
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.down.doc.fill")
+                                .foregroundColor(.themeAccent)
+                                .frame(width: 30)
+                            Text("导入初始数据")
+                                .foregroundColor(.themeText)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.themeText3)
+                        }
+                    }
                 }
 
                 Section("自动备份") {
@@ -189,6 +204,16 @@ struct SettingsView: View {
         try? modelContext.save()
         UserDefaults.standard.removeObject(forKey: "initialDataImported")
         showMessage = "数据已清空"
+        showAlert = true
+    }
+
+    private func importInitialData() {
+        if DataBackupManager.shared.importInitialData(modelContext: modelContext) {
+            UserDefaults.standard.set(true, forKey: "initialDataImported")
+            showMessage = "初始数据导入成功"
+        } else {
+            showMessage = "初始数据导入失败，请检查文件是否存在"
+        }
         showAlert = true
     }
 

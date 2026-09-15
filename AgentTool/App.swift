@@ -12,9 +12,11 @@ struct AgentToolApp: App {
     @StateObject private var tabRouter = TabRouter()
 
     init() {
-        // 强制应用内系统控件使用中文（包括分享界面、日期选择器等）
+        // 强制应用内系统控件使用中文
         UserDefaults.standard.set(["zh-Hans", "zh_CN"], forKey: "AppleLanguages")
         UserDefaults.standard.synchronize()
+
+        // 尝试初始化ModelContainer，失败则删除旧store重试
         do {
             container = try ModelContainer(for:
                 Property.self, RentMonthRecord.self, UtilityQuarterRecord.self,
@@ -22,22 +24,39 @@ struct AgentToolApp: App {
                 PayoutRecord.self, PayoutMonthRecord.self, ProfitCalculation.self
             )
         } catch {
+            print("ModelContainer init failed: \(error)")
+            // 删除所有可能的SwiftData store文件
             let fileManager = FileManager.default
             if let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
-                let files = try? fileManager.contentsOfDirectory(at: appSupport, includingPropertiesForKeys: nil)
-                for file in files ?? [] {
-                    if file.lastPathComponent.hasSuffix(".store") ||
-                       file.lastPathComponent.hasSuffix(".store-wal") ||
-                       file.lastPathComponent.hasSuffix(".store-shm") {
-                        try? fileManager.removeItem(at: file)
+                if let files = try? fileManager.contentsOfDirectory(at: appSupport, includingPropertiesForKeys: nil) {
+                    for file in files {
+                        let name = file.lastPathComponent
+                        if name.hasSuffix(".store") || name.hasSuffix(".store-wal") ||
+                           name.hasSuffix(".store-shm") || name.contains("AgentTool") {
+                            try? fileManager.removeItem(at: file)
+                            print("Removed: \(name)")
+                        }
                     }
                 }
             }
-            container = try! ModelContainer(for:
-                Property.self, RentMonthRecord.self, UtilityQuarterRecord.self,
-                DealRecord.self, MiscIncome.self, MiscExpense.self,
-                PayoutRecord.self, PayoutMonthRecord.self, ProfitCalculation.self
-            )
+            // 再试一次，不行就用空配置
+            do {
+                container = try ModelContainer(for:
+                    Property.self, RentMonthRecord.self, UtilityQuarterRecord.self,
+                    DealRecord.self, MiscIncome.self, MiscExpense.self,
+                    PayoutRecord.self, PayoutMonthRecord.self, ProfitCalculation.self
+                )
+            } catch {
+                print("Second init also failed: \(error)")
+                // 使用内存存储，确保不会崩溃
+                let config = ModelConfiguration(isStoredInMemoryOnly: true)
+                container = try! ModelContainer(for:
+                    Property.self, RentMonthRecord.self, UtilityQuarterRecord.self,
+                    DealRecord.self, MiscIncome.self, MiscExpense.self,
+                    PayoutRecord.self, PayoutMonthRecord.self, ProfitCalculation.self,
+                    configurations: config
+                )
+            }
         }
     }
 
@@ -57,7 +76,6 @@ struct AgentToolApp: App {
 struct MainTabView: View {
     @EnvironmentObject private var tabRouter: TabRouter
     @Environment(\.modelContext) private var modelContext
-    @State private var hasImported = false
 
     private let tabs = [
         (title: "工作台", icon: "house.fill"),
@@ -79,7 +97,6 @@ struct MainTabView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // 内容区域
             ZStack {
                 Color.themeBg.ignoresSafeArea()
                 Group {
@@ -96,7 +113,7 @@ struct MainTabView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // 自定义底部导航
+            // 底部导航
             VStack(spacing: 0) {
                 Divider().background(Color.themeBorder)
                 HStack(spacing: 0) {
@@ -120,19 +137,7 @@ struct MainTabView: View {
                 .background(Color.themePanel)
             }
         }
-        .onAppear {
-            // 首次启动导入初始数据（只执行一次）
-            if !hasImported && !UserDefaults.standard.bool(forKey: "initialDataImported") {
-                hasImported = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    if DataBackupManager.shared.importInitialData(modelContext: modelContext) {
-                        UserDefaults.standard.set(true, forKey: "initialDataImported")
-                        print("初始数据导入成功")
-                    } else {
-                        print("初始数据导入失败或文件不存在")
-                    }
-                }
-            }
-        }
+        // 暂时禁用自动导入，先确认APP能正常打开
+        // .onAppear { 导入逻辑移到设置中手动触发 }
     }
 }
