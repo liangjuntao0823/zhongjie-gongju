@@ -4,19 +4,22 @@ import SwiftData
 // 数据备份/导入导出管理
 class DataBackupManager {
     static let shared = DataBackupManager()
+    private let formatter = ISO8601DateFormatter()
 
     // 导出所有数据为JSON
     func exportAllData(modelContext: ModelContext) -> Data? {
-        let deals = try? modelContext.fetch(FetchDescriptor<DealRecord>())
-        let incomes = try? modelContext.fetch(FetchDescriptor<MiscIncome>())
-        let expenses = try? modelContext.fetch(FetchDescriptor<MiscExpense>())
-        let properties = try? modelContext.fetch(FetchDescriptor<Property>())
-        let payouts = try? modelContext.fetch(FetchDescriptor<PayoutRecord>())
+        let deals = (try? modelContext.fetch(FetchDescriptor<DealRecord>())) ?? []
+        let incomes = (try? modelContext.fetch(FetchDescriptor<MiscIncome>())) ?? []
+        let expenses = (try? modelContext.fetch(FetchDescriptor<MiscExpense>())) ?? []
+        let properties = (try? modelContext.fetch(FetchDescriptor<Property>())) ?? []
+        let payouts = (try? modelContext.fetch(FetchDescriptor<PayoutRecord>())) ?? []
 
         var dict: [String: Any] = [:]
-        dict["deals"] = (deals ?? []).map { deal in
+
+        // 成交
+        dict["deals"] = deals.map { deal in
             [
-                "date": ISO8601DateFormatter().string(from: deal.date),
+                "date": formatter.string(from: deal.date),
                 "roomNumber": deal.roomNumber,
                 "landlord": deal.landlord,
                 "unitType": deal.unitType,
@@ -35,13 +38,19 @@ class DataBackupManager {
                 "notes": deal.notes
             ]
         }
-        dict["incomes"] = (incomes ?? []).map { inc in
-            ["date": ISO8601DateFormatter().string(from: inc.date), "item": inc.item, "amount": inc.amount, "notes": inc.notes]
+
+        // 杂项收入
+        dict["incomes"] = incomes.map { inc in
+            ["date": formatter.string(from: inc.date), "item": inc.item, "amount": inc.amount, "notes": inc.notes]
         }
-        dict["expenses"] = (expenses ?? []).map { exp in
-            ["date": ISO8601DateFormatter().string(from: exp.date), "item": exp.item, "amount": exp.amount, "notes": exp.notes]
+
+        // 杂项支出
+        dict["expenses"] = expenses.map { exp in
+            ["date": formatter.string(from: exp.date), "item": exp.item, "amount": exp.amount, "notes": exp.notes]
         }
-        dict["properties"] = (properties ?? []).map { prop in
+
+        // 房源
+        dict["properties"] = properties.map { prop in
             [
                 "roomNumber": prop.roomNumber,
                 "landlord": prop.landlord,
@@ -61,17 +70,21 @@ class DataBackupManager {
                 "quarterlyUtilityRecords": prop.quarterlyUtilityRecords.map { ["quarter": $0.quarter, "electricAmount": $0.electricAmount, "waterAmount": $0.waterAmount, "isSettled": $0.isSettled] }
             ]
         }
-        dict["payouts"] = (payouts ?? []).map { p in
+
+        // 包租
+        dict["payouts"] = payouts.map { p in
             [
                 "roomNumber": p.roomNumber,
-                "landlord": p.landlord,
+                "manager": p.manager,
                 "unitType": p.unitType,
                 "annualRent": p.annualRent,
                 "deposit": p.deposit,
-                "leaseStartDate": ISO8601DateFormatter().string(from: p.leaseStartDate),
-                "leaseEndDate": ISO8601DateFormatter().string(from: p.leaseEndDate),
+                "leaseStartDate": formatter.string(from: p.leaseStartDate),
+                "leaseEndDate": formatter.string(from: p.leaseEndDate),
+                "leaseDuration": p.leaseDuration,
                 "rentFreeDays": p.rentFreeDays,
                 "waterMeterBase": p.waterMeterBase,
+                "paymentMethod": p.paymentMethod,
                 "notes": p.notes,
                 "monthlyPayouts": p.monthlyPayouts.map { ["month": $0.month, "amount": $0.amount, "isPaid": $0.isPaid] }
             ]
@@ -90,8 +103,6 @@ class DataBackupManager {
         try? modelContext.delete(model: MiscExpense.self)
         try? modelContext.delete(model: Property.self)
         try? modelContext.delete(model: PayoutRecord.self)
-
-        let formatter = ISO8601DateFormatter()
 
         // 导入成交
         if let deals = dict["deals"] as? [[String: Any]] {
@@ -185,14 +196,16 @@ class DataBackupManager {
             for p in payouts {
                 let payout = PayoutRecord(
                     roomNumber: p["roomNumber"] as? String ?? "",
-                    landlord: p["landlord"] as? String ?? "",
+                    manager: p["manager"] as? String ?? "",
                     unitType: p["unitType"] as? String ?? "",
-                    annualRent: p["annualRent"] as? Double ?? 0,
-                    deposit: p["deposit"] as? Double ?? 0,
                     leaseStartDate: formatter.date(from: p["leaseStartDate"] as? String ?? "") ?? Date(),
                     leaseEndDate: formatter.date(from: p["leaseEndDate"] as? String ?? "") ?? Date(),
+                    leaseDuration: p["leaseDuration"] as? String ?? "",
                     rentFreeDays: p["rentFreeDays"] as? Int ?? 0,
+                    annualRent: p["annualRent"] as? Double ?? 0,
+                    deposit: p["deposit"] as? Double ?? 0,
                     waterMeterBase: p["waterMeterBase"] as? Int ?? 0,
+                    paymentMethod: p["paymentMethod"] as? String ?? "月付",
                     notes: p["notes"] as? String ?? ""
                 )
                 if let monthly = p["monthlyPayouts"] as? [[String: Any]] {
