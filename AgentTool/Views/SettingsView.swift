@@ -108,31 +108,65 @@ struct SettingsView: View {
                 }
 
                 Section("自动备份") {
-                    Toggle("启用自动备份", isOn: $autoBackupEnabled)
-                        .tint(.themeAccent)
-                        .onChange(of: autoBackupEnabled) { _, _ in saveAutoSettings() }
+                    HStack {
+                        Text("启用自动备份")
+                            .foregroundColor(.themeText)
+                        Spacer()
+                        Toggle("", isOn: $autoBackupEnabled)
+                            .tint(.themeAccent)
+                            .labelsHidden()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 14)
+                    .background(Color(hex: "F2F2F7"))
+                    .cornerRadius(12)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .onChange(of: autoBackupEnabled) { _, _ in saveAutoSettings() }
 
                     if autoBackupEnabled {
-                        Picker("备份频率", selection: $backupFrequency) {
-                            Text("每天").tag("day")
-                            Text("每周").tag("week")
-                            Text("每月").tag("month")
+                        HStack {
+                            Text("备份频率")
+                                .foregroundColor(.themeText)
+                            Spacer()
+                            Picker("", selection: $backupFrequency) {
+                                Text("每天").tag("day")
+                                Text("每周").tag("week")
+                                Text("每月").tag("month")
+                            }
+                            .labelsHidden()
                         }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 14)
+                        .background(Color(hex: "F2F2F7"))
+                        .cornerRadius(12)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                         .onChange(of: backupFrequency) { _, _ in saveAutoSettings() }
 
-                        Stepper(value: $backupHour, in: 0...23) {
-                            HStack {
-                                Text("备份时间")
-                                Spacer()
+                        HStack {
+                            Text("备份时间")
+                                .foregroundColor(.themeText)
+                            Spacer()
+                            Stepper(value: $backupHour, in: 0...23) {
                                 Text(String(format: "%02d:00", backupHour))
                                     .foregroundColor(.themeText2)
                             }
+                            .labelsHidden()
                         }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 14)
+                        .background(Color(hex: "F2F2F7"))
+                        .cornerRadius(12)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                         .onChange(of: backupHour) { _, _ in saveAutoSettings() }
 
                         Text("自动备份将保存到总备份文件夹")
                             .font(.footnote)
                             .foregroundColor(.themeText3)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                     }
                 }
 
@@ -200,8 +234,6 @@ struct SettingsView: View {
                             Text("版本更新介绍")
                                 .foregroundColor(.themeText)
                             Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.themeText3)
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 14)
@@ -212,7 +244,7 @@ struct SettingsView: View {
                     .listRowSeparator(.hidden)
                 }
             }
-            .listRowSpacing(6)
+            .listRowSpacing(2)
             .scrollContentBackground(.hidden)
             .background(Color.white)
             .navigationTitle("设置")
