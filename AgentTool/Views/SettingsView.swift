@@ -366,7 +366,7 @@ struct ExcelConvertView: View {
         isConverting = true
         convertMessage = ""
 
-        DispatchQueue.global(qos: .userInitiated).async {
+        Task {
             do {
                 guard url.startAccessingSecurityScopedResource() else {
                     throw NSError(domain: "ExcelConvert", code: -1, userInfo: [NSLocalizedDescriptionKey: "无法访问文件"])
@@ -489,13 +489,13 @@ struct ExcelConvertView: View {
 
                 let data = try JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
 
-                DispatchQueue.main.async {
+                await MainActor.run {
                     isConverting = false
                     convertedData = data
                     convertMessage = "成交\(deals.count)条 收入\(incomes.count)条 支出\(expenses.count)条 收租\(properties.count)条"
                 }
             } catch {
-                DispatchQueue.main.async {
+                await MainActor.run {
                     isConverting = false
                     convertMessage = "转换失败：\(error.localizedDescription)"
                     convertedData = nil
