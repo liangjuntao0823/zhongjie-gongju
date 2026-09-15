@@ -53,20 +53,21 @@ struct AgentToolApp: App {
     }
 }
 
+// 自定义6个Tab的底部导航
 struct MainTabView: View {
     @EnvironmentObject private var tabRouter: TabRouter
     @Environment(\.modelContext) private var modelContext
 
-    init() {
-        let appearance = UITabBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(Color.themePanel)
-        appearance.selectionIndicatorTintColor = UIColor(Color.themeAccent)
-        UITabBar.appearance().standardAppearance = appearance
-        UITabBar.appearance().scrollEdgeAppearance = appearance
-        UITabBar.appearance().tintColor = UIColor(Color.themeAccent)
-        UITabBar.appearance().unselectedItemTintColor = UIColor(Color.themeText3)
+    private let tabs = [
+        (title: "工作台", icon: "house.fill"),
+        (title: "成交", icon: "doc.text.fill"),
+        (title: "收租", icon: "creditcard.fill"),
+        (title: "包租", icon: "arrow.up.circle.fill"),
+        (title: "汇总", icon: "chart.pie.fill"),
+        (title: "设置", icon: "gearshape.fill")
+    ]
 
+    init() {
         let navAppearance = UINavigationBarAppearance()
         navAppearance.configureWithOpaqueBackground()
         navAppearance.backgroundColor = UIColor(Color.themeBg)
@@ -76,32 +77,48 @@ struct MainTabView: View {
     }
 
     var body: some View {
-        TabView(selection: $tabRouter.selectedTab) {
-            DashboardView()
-                .tabItem { Label("工作台", systemImage: "house.fill") }
-                .tag(0)
+        ZStack(alignment: .bottom) {
+            // 内容区域
+            Group {
+                switch tabRouter.selectedTab {
+                case 0: DashboardView()
+                case 1: DealsView()
+                case 2: RentCollectionView()
+                case 3: PayoutView()
+                case 4: ProfitView()
+                case 5: SettingsView()
+                default: DashboardView()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            DealsView()
-                .tabItem { Label("成交", systemImage: "doc.text.fill") }
-                .tag(1)
-
-            RentCollectionView()
-                .tabItem { Label("收租", systemImage: "creditcard.fill") }
-                .tag(2)
-
-            PayoutView()
-                .tabItem { Label("包租", systemImage: "arrow.up.circle.fill") }
-                .tag(3)
-
-            ProfitView()
-                .tabItem { Label("汇总", systemImage: "chart.pie.fill") }
-                .tag(4)
-
-            SettingsView()
-                .tabItem { Label("设置", systemImage: "gearshape.fill") }
-                .tag(5)
+            // 自定义底部导航
+            VStack(spacing: 0) {
+                Divider()
+                    .background(Color.themeBorder)
+                HStack(spacing: 0) {
+                    ForEach(0..<tabs.count, id: \.self) { index in
+                        Button {
+                            tabRouter.selectedTab = index
+                        } label: {
+                            VStack(spacing: 3) {
+                                Image(systemName: tabs[index].icon)
+                                    .font(.system(size: 18))
+                                Text(tabs[index].title)
+                                    .font(.system(size: 10))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 6)
+                            .padding(.bottom, 8)
+                            .foregroundColor(tabRouter.selectedTab == index ? .themeAccent : .themeText3)
+                        }
+                    }
+                }
+                .background(Color.themePanel)
+                .padding(.bottom, UIApplication.shared.windows.first?.safeAreaInsets.bottom ?? 0)
+            }
         }
-        .tint(.themeAccent)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .onAppear {
             // 首次启动导入初始数据
             if !UserDefaults.standard.bool(forKey: "initialDataImported") {
