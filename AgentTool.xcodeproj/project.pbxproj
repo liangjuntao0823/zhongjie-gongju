@@ -17,6 +17,8 @@
 		A10000010000000000000008 /* RentCollectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000008 /* RentCollectionView.swift */; };
 		A10000010000000000000009 /* PayoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000009 /* PayoutView.swift */; };
 		A10000010000000000000010 /* ProfitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000010 /* ProfitView.swift */; };
+		A10000010000000000000095 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000095 /* SettingsView.swift */; };
+		A10000010000000000000096 /* DataBackupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000096 /* DataBackupManager.swift */; };
 		A10000010000000000000011 /* UtilityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000011 /* UtilityView.swift */; };
 		A10000010000000000000015 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000015 /* Theme.swift */; };
 		A10000010000000000000012 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000012 /* Assets.xcassets */; };
@@ -34,6 +36,8 @@
 		B10000010000000000000008 /* RentCollectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RentCollectionView.swift; sourceTree = "<group>"; };
 		B10000010000000000000009 /* PayoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayoutView.swift; sourceTree = "<group>"; };
 		B10000010000000000000010 /* ProfitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfitView.swift; sourceTree = "<group>"; };
+		B10000010000000000000095 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		B10000010000000000000096 /* DataBackupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataBackupManager.swift; sourceTree = "<group>"; };
 		B10000010000000000000011 /* UtilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UtilityView.swift; sourceTree = "<group>"; };
 		B10000010000000000000015 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		B10000010000000000000012 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
