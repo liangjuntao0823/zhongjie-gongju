@@ -171,17 +171,6 @@ struct DashboardView: View {
         return 0
     }
 
-    // 工作时长：从最早成交单到今日的天数
-    private var workDays: Int {
-        guard let deals = try? modelContext.fetch(FetchDescriptor<DealRecord>()),
-              let firstDeal = deals.min(by: { $0.date < $1.date }) else {
-            return 0
-        }
-        let calendar = Calendar.current
-        let components = calendar.dateComponents([.day], from: firstDeal.date, to: Date())
-        return max(0, components.day ?? 0)
-    }
-
     var body: some View {
         VStack(spacing: 12) {
             // 顶部标题（固定）
@@ -241,7 +230,9 @@ struct DashboardView: View {
             .cornerRadius(14)
             .padding(.horizontal)
 
-            // 快捷操作（固定）
+            // 以下内容可滑动
+            ScrollView {
+                VStack(spacing: 16) {
                     // 快捷操作
                     VStack(alignment: .leading, spacing: 10) {
                         SectionTitle(title: "快捷操作")
@@ -274,16 +265,6 @@ struct DashboardView: View {
 
                     // KPI 看板
                 VStack(spacing: 10) {
-                    // 第0行：工作时长
-                    HStack(spacing: 10) {
-                        KpiCard(
-                            label: "工作时长",
-                            value: "\(workDays)",
-                            unit: "天",
-                            foot: "从首单成交至今",
-                            style: .normal
-                        )
-                    }
                     // 第一行：在管房间、即将到期
                     HStack(spacing: 10) {
                         KpiCard(
@@ -316,7 +297,7 @@ struct DashboardView: View {
                             value: "\(Int(stats?.monthlyMiscIncome ?? 0))",
                             unit: "元",
                             foot: "本月",
-                            style: .alert
+                            style: .normal
                         )
                     }
 
@@ -344,9 +325,6 @@ struct DashboardView: View {
                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.themeBorder, lineWidth: 1))
                 .padding(.horizontal)
 
-            // 以下内容可滑动
-            ScrollView {
-                VStack(spacing: 16) {
                 // 收租进度
                 VStack(alignment: .leading, spacing: 10) {
                     SectionTitle(title: "收租进度", subtitle: "本月")
