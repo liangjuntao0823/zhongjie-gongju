@@ -137,7 +137,28 @@ struct MainTabView: View {
                 .background(Color.themePanel)
             }
         }
-        // 暂时禁用自动导入，先确认APP能正常打开
-        // .onAppear { 导入逻辑移到设置中手动触发 }
+        .onAppear {
+            // 启动时将预置备份文件复制到Backups文件夹
+            copyPresetBackupIfNeeded()
+        }
+    }
+
+    private func copyPresetBackupIfNeeded() {
+        guard let sourceURL = Bundle.main.url(forResource: "presetBackup", withExtension: "json") else {
+            print("presetBackup.json not found in bundle")
+            return
+        }
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let backupFolder = docs.appendingPathComponent("Backups", isDirectory: true)
+        try? FileManager.default.createDirectory(at: backupFolder, withIntermediateDirectories: true)
+        let destURL = backupFolder.appendingPathComponent("初始数据备份.json")
+        if !FileManager.default.fileExists(atPath: destURL.path) {
+            do {
+                try FileManager.default.copyItem(at: sourceURL, to: destURL)
+                print("预置备份已复制到Backups文件夹")
+            } catch {
+                print("复制预置备份失败: \(error)")
+            }
+        }
     }
 }

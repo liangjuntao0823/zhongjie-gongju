@@ -7,7 +7,6 @@ struct SettingsView: View {
     @State private var showAlert = false
     @State private var showClearConfirm = false
     @State private var showRestoreList = false
-    @State private var isImporting = false
     @State private var autoBackupEnabled = false
     @State private var backupFrequency = "day"
     @State private var backupHour = 23
@@ -52,26 +51,6 @@ struct SettingsView: View {
                                 .foregroundColor(.themeText3)
                         }
                     }
-
-                    Button {
-                        importInitialData()
-                    } label: {
-                        HStack {
-                            Image(systemName: "arrow.down.doc.fill")
-                                .foregroundColor(.themeAccent)
-                                .frame(width: 24)
-                            Text("导入初始数据")
-                                .foregroundColor(.themeText)
-                            Spacer()
-                            if isImporting {
-                                ProgressView()
-                            } else {
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.themeText3)
-                            }
-                        }
-                    }
-                    .disabled(isImporting)
 
                     Button {
                         showClearConfirm = true
@@ -194,23 +173,6 @@ struct SettingsView: View {
         }
     }
 
-    // 导入初始数据
-    private func importInitialData() {
-        isImporting = true
-        DataBackupManager.shared.importInitialData(modelContext: modelContext) { success in
-            DispatchQueue.main.async {
-                isImporting = false
-                if success {
-                    UserDefaults.standard.set(true, forKey: "initialDataImported")
-                    showMessage = "初始数据导入成功"
-                } else {
-                    showMessage = "初始数据导入失败"
-                }
-                showAlert = true
-            }
-        }
-    }
-
     // 清空数据
     private func clearData() {
         if let deals = try? modelContext.fetch(FetchDescriptor<DealRecord>()) {
@@ -282,6 +244,7 @@ struct RestoreBackupView: View {
                             }
                         }
                     }
+                    .onDelete(perform: deleteFile)
                 }
             }
             .navigationTitle("选择备份")
@@ -290,11 +253,22 @@ struct RestoreBackupView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("取消") { dismiss() }
                 }
+                ToolbarItem(placement: .topBarLeading) {
+                    EditButton()
+                }
             }
             .onAppear {
                 loadFiles()
             }
         }
+    }
+
+    private func deleteFile(at offsets: IndexSet) {
+        for index in offsets {
+            let url = files[index]
+            try? FileManager.default.removeItem(at: url)
+        }
+        loadFiles()
     }
 
     private func loadFiles() {
