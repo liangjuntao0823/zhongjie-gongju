@@ -18,7 +18,7 @@ struct ProfitView: View {
     @Query private var incomes: [MiscIncome]
     @Query private var expenses: [MiscExpense]
 
-    @State private var selectedYear: Int? = Calendar.current.component(.year, from: Date())
+    @State private var selectedYear: Int? = nil
     @State private var selectedMonth: Int? = nil
 
     private var calendar: Calendar { Calendar.current }
@@ -105,8 +105,9 @@ struct ProfitView: View {
                                 SummaryCard(title: "杂项支出", value: "¥\(Int(yearTotal.miscExpense))", color: .themeAccentDark)
                             }
                         }
+                        .frame(maxWidth: .infinity)
                         SummaryCard(title: "净总收入", value: "¥\(Int(yearTotal.netIncome))", color: .themeRed)
-                            .frame(maxWidth: .infinity)
+                            .frame(width: 110)
                     }
                     .padding(.horizontal)
 
@@ -134,7 +135,7 @@ struct MonthlySummaryRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("\(summary.year)年\(summary.month)月")
+                Text("\(String(summary.year))年\(summary.month)月")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(.themeText)
                     .padding(.horizontal, 12)

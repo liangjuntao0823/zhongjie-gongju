@@ -212,8 +212,9 @@ struct SettingsView: View {
                     .listRowSeparator(.hidden)
                 }
             }
+            .listRowSpacing(6)
             .scrollContentBackground(.hidden)
-            .background(Color.themeBg)
+            .background(Color.white)
             .navigationTitle("设置")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear { loadAutoSettings() }
