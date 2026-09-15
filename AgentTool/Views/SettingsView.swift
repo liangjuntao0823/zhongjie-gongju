@@ -375,14 +375,17 @@ struct ExcelConvertView: View {
                 defer { url.stopAccessingSecurityScopedResource() }
 
                 let file = try XLSXFile(filepath: url.path)
+                guard let xlsxFile = file else {
+                    throw NSError(domain: "ExcelConvert", code: -2, userInfo: [NSLocalizedDescriptionKey: "无法打开Excel文件"])
+                }
                 var deals: [[String: Any]] = []
                 var incomes: [[String: Any]] = []
                 var expenses: [[String: Any]] = []
                 var properties: [[String: Any]] = []
 
-                for wbk in try file.parseWorkbooks() {
-                    for (name, path) in try file.parseWorksheetPathsAndNames(workbook: wbk) {
-                        let worksheet = try file.parseWorksheet(at: path)
+                for wbk in try xlsxFile.parseWorkbooks() {
+                    for (name, path) in try xlsxFile.parseWorksheetPathsAndNames(workbook: wbk) {
+                        let worksheet = try xlsxFile.parseWorksheet(at: path)
                         let rows = worksheet.data?.rows ?? []
                         guard rows.count > 1 else { continue }
 
